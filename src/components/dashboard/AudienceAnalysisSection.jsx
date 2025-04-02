@@ -1,0 +1,468 @@
+import React from 'react';
+import PropTypes from 'prop-types';
+import { motion } from 'framer-motion';
+import Section from '../layout/Section';
+import PieChart from '../charts/PieChart';
+import BarChart from '../charts/BarChart';
+import PlatformOptimizationTabs from './PlatformOptimizationTabs';
+import {
+  spacing,
+  colors,
+  borderRadius,
+  shadows,
+  typography
+} from '../../utils/theme';
+
+const AudienceAnalysisSection = ({ audienceData }) => {
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
+  // Format data for charts
+  const formatDemographicData = distribution => {
+    return Object.entries(distribution).map(([key, value]) => ({
+      label: key,
+      value:
+        typeof value === 'string'
+          ? value === 'high'
+            ? 80
+            : value === 'moderate'
+            ? 50
+            : value === 'low'
+            ? 30
+            : value === 'some'
+            ? 40
+            : value === 'prominent'
+            ? 70
+            : value === 'slightly higher'
+            ? 60
+            : 45
+          : value
+    }));
+  };
+
+  const ageDistributionData = {
+    labels: Object.keys(
+      audienceData.representation_metrics.demographics_breakdown
+        .age_distribution
+    ),
+    datasets: [
+      {
+        data: Object.values(
+          audienceData.representation_metrics.demographics_breakdown
+            .age_distribution
+        ).map(value =>
+          value === 'high' ? 80 : value === 'moderate' ? 50 : 30
+        ),
+        backgroundColor: [colors.primary.main, colors.accent.blue],
+        borderWidth: 1
+      }
+    ]
+  };
+
+  const genderDistribution = formatDemographicData(
+    audienceData.representation_metrics.demographics_breakdown
+      .gender_distribution
+  );
+  const genderData = {
+    labels: genderDistribution.map(item => item.label),
+    datasets: [
+      {
+        data: genderDistribution.map(item => item.value),
+        backgroundColor: [colors.accent.purple, colors.accent.blue],
+        borderWidth: 1
+      }
+    ]
+  };
+
+  const ethnicityDistribution = formatDemographicData(
+    audienceData.representation_metrics.demographics_breakdown
+      .ethnicity_distribution
+  );
+  const ethnicityData = {
+    labels: ethnicityDistribution.map(item => item.label),
+    datasets: [
+      {
+        data: ethnicityDistribution.map(item => item.value),
+        backgroundColor: [
+          colors.primary.main,
+          colors.primary.light,
+          colors.accent.green,
+          colors.accent.blue,
+          colors.accent.purple,
+          colors.accent.orange
+        ],
+        borderWidth: 1
+      }
+    ]
+  };
+
+  const platformFitData = {
+    labels: Object.keys(audienceData.primary_audience.platform_fit),
+    datasets: [
+      {
+        label: 'Platform Fit Score',
+        data: Object.values(audienceData.primary_audience.platform_fit),
+        backgroundColor: `${colors.accent.blue}80`,
+        borderColor: colors.accent.blue,
+        borderWidth: 2
+      }
+    ]
+  };
+
+  // Secondary audience card
+  const SecondaryAudienceCard = ({ audience, index }) => (
+    <motion.div
+      variants={itemVariants}
+      style={{
+        backgroundColor: colors.neutral.white,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        marginBottom: spacing.md,
+        boxShadow: shadows.sm,
+        flex: '1 1 300px'
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: `${colors.primary.main}15`,
+          padding: spacing.xs,
+          borderRadius: borderRadius.sm,
+          marginBottom: spacing.sm,
+          width: 'fit-content'
+        }}
+      >
+        <span style={{ fontWeight: typography.fontWeights.medium }}>
+          Confidence: {audience.confidence}
+        </span>
+      </div>
+
+      <h4
+        style={{
+          margin: 0,
+          marginBottom: spacing.sm,
+          fontSize: typography.fontSize.md
+        }}
+      >
+        {audience.demographic}
+      </h4>
+
+      <div>
+        <h5
+          style={{
+            marginBottom: spacing.xs,
+            fontSize: typography.fontSize.sm
+          }}
+        >
+          Reasons:
+        </h5>
+        <ul style={{ paddingLeft: spacing.lg, margin: 0 }}>
+          {audience.reasons.map((reason, idx) => (
+            <li key={idx} style={{ marginBottom: spacing.xs }}>
+              {reason}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </motion.div>
+  );
+
+  return (
+    <Section title="Audience Analysis">
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {/* Primary Audience */}
+        <motion.div
+          variants={itemVariants}
+          style={{
+            backgroundColor: colors.neutral.white,
+            borderRadius: borderRadius.lg,
+            padding: spacing.lg,
+            marginBottom: spacing.lg,
+            boxShadow: shadows.md
+          }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              marginBottom: spacing.md,
+              fontSize: typography.fontSize.lg,
+              color: colors.primary.dark
+            }}
+          >
+            Primary Audience
+          </h3>
+
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: spacing.lg,
+              alignItems: 'flex-start'
+            }}
+          >
+            <div style={{ flex: '1 1 400px' }}>
+              <p
+                style={{
+                  fontSize: typography.fontSize.md,
+                  lineHeight: 1.6,
+                  marginTop: 0
+                }}
+              >
+                <strong>Demographic:</strong>{' '}
+                {audienceData.primary_audience.demographic}
+              </p>
+              <p
+                style={{
+                  fontSize: typography.fontSize.md,
+                  lineHeight: 1.6
+                }}
+              >
+                <strong>Confidence:</strong>{' '}
+                {audienceData.primary_audience.confidence}
+              </p>
+            </div>
+
+            <div style={{ flex: '1 1 400px' }}>
+              <h4 style={{ marginBottom: spacing.sm }}>Platform Fit</h4>
+              <div style={{ height: '250px' }}>
+                <BarChart
+                  data={platformFitData}
+                  horizontal={false}
+                  animate={true}
+                />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Secondary Audiences */}
+        <motion.div
+          variants={itemVariants}
+          style={{ marginBottom: spacing.lg }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              marginBottom: spacing.md,
+              fontSize: typography.fontSize.lg,
+              color: colors.primary.dark
+            }}
+          >
+            Secondary Audiences
+          </h3>
+
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: spacing.md
+            }}
+          >
+            {audienceData.secondary_audiences.map((audience, index) => (
+              <SecondaryAudienceCard
+                key={index}
+                audience={audience}
+                index={index}
+              />
+            ))}
+          </div>
+        </motion.div>
+
+        {/* Demographics Breakdown */}
+        <motion.div
+          variants={itemVariants}
+          style={{ marginBottom: spacing.lg }}
+        >
+          <h3
+            style={{
+              margin: 0,
+              marginBottom: spacing.md,
+              fontSize: typography.fontSize.lg,
+              color: colors.primary.dark
+            }}
+          >
+            Demographics Breakdown
+          </h3>
+
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: spacing.xl,
+              marginBottom: spacing.lg
+            }}
+          >
+            <div style={{ flex: '1 1 300px', minWidth: '250px' }}>
+              <h4 style={{ textAlign: 'center', marginBottom: spacing.md }}>
+                Age Distribution
+              </h4>
+              <div style={{ height: '250px' }}>
+                <BarChart
+                  data={ageDistributionData}
+                  horizontal={false}
+                  animate={true}
+                />
+              </div>
+            </div>
+
+            <div style={{ flex: '1 1 300px', minWidth: '250px' }}>
+              <h4 style={{ textAlign: 'center', marginBottom: spacing.md }}>
+                Gender Distribution
+              </h4>
+              <div style={{ height: '250px' }}>
+                <PieChart data={genderData} donut={true} animate={true} />
+              </div>
+            </div>
+
+            <div style={{ flex: '1 1 300px', minWidth: '250px' }}>
+              <h4 style={{ textAlign: 'center', marginBottom: spacing.md }}>
+                Ethnicity Distribution
+              </h4>
+              <div style={{ height: '250px' }}>
+                <PieChart data={ethnicityData} animate={true} />
+              </div>
+            </div>
+          </div>
+
+          <motion.div
+            variants={itemVariants}
+            style={{
+              backgroundColor: colors.neutral.white,
+              borderRadius: borderRadius.lg,
+              padding: spacing.lg,
+              boxShadow: shadows.sm
+            }}
+          >
+            <h4
+              style={{
+                margin: 0,
+                marginBottom: spacing.sm,
+                fontSize: typography.fontSize.md
+              }}
+            >
+              Representation Metrics
+            </h4>
+
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: spacing.md,
+                marginBottom: spacing.md
+              }}
+            >
+              <div
+                style={{
+                  flex: '1 1 200px',
+                  padding: spacing.sm,
+                  backgroundColor: `${colors.primary.main}15`,
+                  borderRadius: borderRadius.md,
+                  textAlign: 'center'
+                }}
+              >
+                <div style={{ fontSize: typography.fontSize.sm }}>
+                  Diversity Score
+                </div>
+                <div
+                  style={{
+                    fontSize: typography.fontSize.xl,
+                    fontWeight: typography.fontWeights.bold,
+                    color: colors.primary.main
+                  }}
+                >
+                  {audienceData.representation_metrics.diversity_score}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  flex: '1 1 200px',
+                  padding: spacing.sm,
+                  backgroundColor: `${colors.accent.green}15`,
+                  borderRadius: borderRadius.md,
+                  textAlign: 'center'
+                }}
+              >
+                <div style={{ fontSize: typography.fontSize.sm }}>
+                  Inclusion Rating
+                </div>
+                <div
+                  style={{
+                    fontSize: typography.fontSize.xl,
+                    fontWeight: typography.fontWeights.bold,
+                    color: colors.accent.green
+                  }}
+                >
+                  {audienceData.representation_metrics.inclusion_rating}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  flex: '1 1 200px',
+                  padding: spacing.sm,
+                  backgroundColor: `${colors.accent.blue}15`,
+                  borderRadius: borderRadius.md,
+                  textAlign: 'center'
+                }}
+              >
+                <div style={{ fontSize: typography.fontSize.sm }}>
+                  Appeal Breadth
+                </div>
+                <div
+                  style={{
+                    fontSize: typography.fontSize.xl,
+                    fontWeight: typography.fontWeights.bold,
+                    color: colors.accent.blue
+                  }}
+                >
+                  {audienceData.representation_metrics.appeal_breadth}
+                </div>
+              </div>
+            </div>
+
+            <h4
+              style={{
+                margin: 0,
+                marginBottom: spacing.sm,
+                fontSize: typography.fontSize.md
+              }}
+            >
+              Insights
+            </h4>
+            <p
+              style={{
+                lineHeight: 1.6,
+                margin: 0
+              }}
+            >
+              {audienceData.representation_metrics.insights}
+            </p>
+          </motion.div>
+        </motion.div>
+      </motion.div>
+    </Section>
+  );
+};
+
+AudienceAnalysisSection.propTypes = {
+  audienceData: PropTypes.object.isRequired
+};
+
+export default AudienceAnalysisSection;

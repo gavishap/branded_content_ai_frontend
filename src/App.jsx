@@ -1,6 +1,7 @@
 import React from 'react';
-import Dashboard from './components/dashboard/Dashboard';
-import sampleAnalysisData from './data/sampleAnalysis';
+import './App.css';
+import AnalysisDashboard from './components/dashboard/AnalysisDashboard';
+import analysisData from './data/analysisData';
 import { colors } from './utils/theme';
 
 function App() {
@@ -24,7 +25,7 @@ function App() {
       </header>
 
       <main>
-        <Dashboard analysisData={sampleAnalysisData} />
+        <AnalysisDashboard data={analysisData} />
       </main>
 
       <footer
