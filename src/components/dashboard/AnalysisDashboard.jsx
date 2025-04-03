@@ -174,7 +174,7 @@ const AnalysisDashboard = ({ data }) => {
               >
                 <span>Engagement Potential:</span>
                 <strong>
-                  {safeData.performance_metrics?.engagement_score || 0}/100
+                  {safeData.performance_metrics?.engagement?.score || 0}/100
                 </strong>
               </div>
               <div
@@ -188,8 +188,8 @@ const AnalysisDashboard = ({ data }) => {
               >
                 <span>Audience Match:</span>
                 <strong>
-                  {safeData.audience_analysis?.primary_audience?.match_score ||
-                    0}
+                  {safeData.audience_analysis?.representation_metrics
+                    ?.appeal_breadth || 0}
                   /100
                 </strong>
               </div>
