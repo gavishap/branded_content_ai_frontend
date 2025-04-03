@@ -73,13 +73,15 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
         }`,
         {
           signal: controller.signal,
-          // Add withCredentials to handle CORS properly
+          // Don't send credentials
           withCredentials: false,
           // Add explicit headers
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json'
-          }
+          },
+          // Explicitly set mode to 'cors'
+          mode: 'cors'
         }
       );
 
