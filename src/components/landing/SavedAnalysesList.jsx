@@ -59,21 +59,45 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
 
   const fetchAnalyses = async () => {
     setLoading(true);
+    setError(null); // Clear any previous errors
+
     try {
+      // Add a timeout to the request to prevent endless loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
       const response = await axios.get(
-        `${API_BASE_URL}/api/saved-analyses?limit=${limit}&skip=${page * limit}`
+        `${API_BASE_URL}/api/saved-analyses?limit=${limit}&skip=${
+          page * limit
+        }`,
+        { signal: controller.signal }
       );
 
-      if (response.data.success) {
-        setAnalyses(response.data.analyses);
+      // Clear the timeout since we got a response
+      clearTimeout(timeoutId);
+
+      // Check if we have analyses array in the response (even if empty)
+      if (response.data && response.data.hasOwnProperty('analyses')) {
+        setAnalyses(response.data.analyses || []);
+        setLoading(false);
       } else {
-        setError('Failed to load analyses');
+        // Handle malformed response
+        console.error('Malformed API response:', response.data);
+        setError('Failed to load analyses. Unexpected API response format.');
+        setLoading(false);
       }
     } catch (err) {
-      console.error('Error fetching saved analyses:', err);
-      setError('Failed to load analyses. Please try again later.');
-    } finally {
+      // Check if this was an abort error (timeout)
+      if (err.name === 'AbortError') {
+        console.error('Request timed out');
+        setError('Request timed out. MongoDB may be unavailable.');
+      } else {
+        console.error('Error fetching saved analyses:', err);
+        setError('Failed to load analyses. Please try again later.');
+      }
       setLoading(false);
+      // Set analyses to empty array to ensure UI shows "no analyses" state
+      setAnalyses([]);
     }
   };
 
@@ -84,14 +108,22 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
         `${API_BASE_URL}/api/saved-analyses/${analysis.id}`
       );
 
-      if (response.data.success) {
+      // Check if the response contains valid data
+      if (response.data && response.data.analysis) {
         // Pass the analysis data to the parent component
         onAnalysisSelect(response.data.analysis);
+      } else if (analysis.analysis_data) {
+        // If the analysis already has data, use that instead
+        onAnalysisSelect(analysis);
       } else {
-        console.error('Failed to load analysis:', response.data.error);
+        console.error('Failed to load analysis: Invalid response format');
       }
     } catch (err) {
       console.error('Error loading analysis:', err);
+      // If we fail to get details but have the analysis, use what we have
+      if (analysis.analysis_data) {
+        onAnalysisSelect(analysis);
+      }
     }
   };
 
@@ -108,11 +140,15 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
           `${API_BASE_URL}/api/saved-analyses/${analysisId}`
         );
 
-        if (response.data.success) {
+        // Check if the request was successful (status code 200-299)
+        if (response.status >= 200 && response.status < 300) {
           // Refresh the list
           fetchAnalyses();
         } else {
-          console.error('Failed to delete analysis:', response.data.error);
+          console.error(
+            'Failed to delete analysis:',
+            response.data.error || 'Unknown error'
+          );
         }
       } catch (err) {
         console.error('Error deleting analysis:', err);

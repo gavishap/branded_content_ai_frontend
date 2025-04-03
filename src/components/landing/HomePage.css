@@ -1,18 +1,18 @@
 /* Styling for the URL input field placeholder */
 .url-input-field::placeholder {
-  /* Push the placeholder text further to the right */
-  padding-left: 40px;
+  /* Remove the right padding */
+  padding-left: 0;
   /* Slightly transparent text for placeholder */
   color: rgba(71, 85, 105, 0.6);
-  /* Make sure the placeholder doesn't collide with the icon */
-  text-indent: 20px;
+  /* Reset text indent */
+  text-indent: 0;
   /* Transition for smooth appearance */
   transition: opacity 0.3s ease;
 }
 
-/* Ensure the input text itself doesn't collide with the icon */
+/* Ensure the input text itself has normal positioning */
 .url-input-field {
-  text-indent: 12px;
+  text-indent: 0;
 }
 
 /* Optional: Style the placeholder on focus */

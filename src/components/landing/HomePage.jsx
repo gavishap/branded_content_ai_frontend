@@ -435,7 +435,7 @@ const HomePage = ({ onStartAnalysis }) => {
                 style={{
                   width: '100%',
                   padding: `${spacing.lg} ${spacing.xxl}`,
-                  paddingLeft: `${spacing.xxl + spacing.md}`,
+                  paddingRight: `${spacing.xxl + spacing.md}`,
                   fontSize: typography.fontSize.lg,
                   border: `2px solid ${
                     inputMethod === 'url' && url
@@ -452,9 +452,10 @@ const HomePage = ({ onStartAnalysis }) => {
               <FiLink
                 style={{
                   position: 'absolute',
-                  left: spacing.xl,
+                  right: spacing.lg,
                   top: '50%',
                   transform: 'translateY(-50%)',
+                  fontSize: typography.fontSize.xl,
                   color: colors.primary.main
                 }}
                 size={24}
