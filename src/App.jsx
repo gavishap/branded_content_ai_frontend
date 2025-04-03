@@ -183,6 +183,15 @@ function App() {
         const formData = new FormData();
         formData.append('file', content.content);
 
+        console.log(
+          'Uploading file:',
+          content.content.name,
+          'Size:',
+          content.content.size,
+          'Type:',
+          content.content.type
+        );
+
         response = await axios.post(
           `${API_BASE_URL}/api/analyze-unified`,
           formData,

@@ -8,50 +8,128 @@ import {
   shadows,
   typography
 } from '../../utils/theme';
+import { FiUpload } from 'react-icons/fi';
+
+// Define accepted video MIME types
+const ALLOWED_VIDEO_TYPES = [
+  'video/mp4',
+  'video/quicktime', // .mov
+  'video/x-msvideo', // .avi
+  'video/mpeg', // .mpeg
+  'video/webm' // .webm
+];
+
+// Also check file extensions for cases where MIME type detection fails
+const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mpeg', '.webm'];
 
 const HomePage = ({ onStartAnalysis }) => {
   const [url, setUrl] = useState('');
   const [file, setFile] = useState(null);
-  const [dragActive, setDragActive] = useState(false);
-  const [inputMethod, setInputMethod] = useState('url'); // 'url' or 'file'
+  const [inputMethod, setInputMethod] = useState('url');
+  const [dragging, setDragging] = useState(false);
+  const [fileError, setFileError] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleUrlChange = e => {
     setUrl(e.target.value);
   };
 
+  // Validation function to check if file is valid
+  const validateFile = file => {
+    // Check if file exists
+    if (!file) {
+      return { isValid: false, error: 'No file selected' };
+    }
+
+    // Check file type by MIME type
+    const fileType = file.type;
+    const fileExtension = file.name
+      .toLowerCase()
+      .substring(file.name.lastIndexOf('.'));
+
+    console.log(
+      'Validating file:',
+      file.name,
+      'Type:',
+      fileType,
+      'Extension:',
+      fileExtension
+    );
+
+    // Check MIME type OR file extension (for greater compatibility)
+    const isValidType =
+      ALLOWED_VIDEO_TYPES.includes(fileType) ||
+      ALLOWED_VIDEO_EXTENSIONS.includes(fileExtension);
+
+    if (!isValidType) {
+      return {
+        isValid: false,
+        error: `Only video files are supported (${ALLOWED_VIDEO_EXTENSIONS.join(
+          ', '
+        )})`
+      };
+    }
+
+    // Check file size (max 200MB)
+    const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200MB in bytes
+    if (file.size > MAX_FILE_SIZE) {
+      return {
+        isValid: false,
+        error: 'File size exceeds the 200MB limit'
+      };
+    }
+
+    return { isValid: true, error: null };
+  };
+
   const handleFileChange = e => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+    const selectedFile = e.target.files[0];
+    const validation = validateFile(selectedFile);
+
+    if (validation.isValid) {
+      setFile(selectedFile);
+      setFileError(null);
+    } else {
+      setFile(null);
+      setFileError(validation.error);
     }
   };
 
   const handleDragEnter = e => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(true);
+    setDragging(true);
   };
 
   const handleDragLeave = e => {
     e.preventDefault();
     e.stopPropagation();
-    setDragActive(false);
+    setDragging(false);
   };
 
   const handleDragOver = e => {
     e.preventDefault();
     e.stopPropagation();
-    if (!dragActive) setDragActive(true);
+    if (!dragging) {
+      setDragging(true);
+    }
   };
 
   const handleDrop = e => {
     e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
+    setDragging(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
-      setInputMethod('file');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const droppedFile = e.dataTransfer.files[0];
+      const validation = validateFile(droppedFile);
+
+      if (validation.isValid) {
+        setFile(droppedFile);
+        setFileError(null);
+      } else {
+        setFile(null);
+        setFileError(validation.error);
+      }
     }
   };
 
@@ -243,12 +321,12 @@ const HomePage = ({ onStartAnalysis }) => {
             onDrop={handleDrop}
             style={{
               border: `2px dashed ${
-                dragActive ? colors.primary.main : colors.neutral.lightGrey
+                dragging ? colors.primary.main : colors.neutral.lightGrey
               }`,
               borderRadius: borderRadius.lg,
               padding: spacing.xl,
               textAlign: 'center',
-              backgroundColor: dragActive
+              backgroundColor: dragging
                 ? `${colors.primary.light}20`
                 : 'transparent',
               transition: 'all 0.3s ease',
@@ -258,43 +336,102 @@ const HomePage = ({ onStartAnalysis }) => {
           >
             <input
               ref={fileInputRef}
+              id="file-input"
               type="file"
-              accept="video/*"
               onChange={handleFileChange}
               style={{ display: 'none' }}
+              accept=".mp4,.mov,.avi,.mpeg,.webm,video/mp4,video/quicktime,video/x-msvideo,video/mpeg,video/webm"
             />
-            <div
+            <label
+              htmlFor="file-input"
               style={{
-                fontSize: typography.fontSize.md,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '200px',
+                borderRadius: borderRadius.lg,
+                border: '2px dashed',
+                borderColor: dragging
+                  ? colors.primary.main
+                  : colors.neutral.lightGrey,
+                backgroundColor: dragging
+                  ? `${colors.primary.light}30`
+                  : colors.neutral.white,
                 color: colors.neutral.darkGrey,
-                marginBottom: spacing.md
+                cursor: 'pointer',
+                transition: 'all 0.3s',
+                padding: spacing.lg
               }}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
             >
               {file ? (
-                <p>
-                  Selected: <strong>{file.name}</strong>
-                </p>
-              ) : (
                 <>
-                  <p>Drag and drop your video file here</p>
-                  <p>or</p>
-                  <button
+                  <FiUpload size={24} color={colors.primary.main} />
+                  <p
                     style={{
-                      padding: `${spacing.sm} ${spacing.lg}`,
-                      background: colors.primary.main,
-                      color: colors.neutral.white,
-                      border: 'none',
-                      borderRadius: borderRadius.md,
-                      fontSize: typography.fontSize.md,
-                      cursor: 'pointer',
-                      marginTop: spacing.sm
+                      marginTop: spacing.sm,
+                      textAlign: 'center',
+                      fontWeight: 'bold'
                     }}
                   >
-                    Browse Files
-                  </button>
+                    Selected: {file.name}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: typography.fontSize.sm,
+                      color: colors.neutral.grey,
+                      marginTop: spacing.xs
+                    }}
+                  >
+                    {(file.size / (1024 * 1024)).toFixed(2)} MB
+                  </p>
+                  <p
+                    style={{
+                      fontSize: typography.fontSize.sm,
+                      color: colors.status.success,
+                      marginTop: spacing.xs
+                    }}
+                  >
+                    Ready to upload - click "Analyze" below
+                  </p>
+                </>
+              ) : (
+                <>
+                  <FiUpload size={32} color={colors.primary.main} />
+                  <p style={{ marginTop: spacing.md, textAlign: 'center' }}>
+                    Drag and drop your video file here or click to browse
+                  </p>
+                  <p
+                    style={{
+                      fontSize: typography.fontSize.sm,
+                      color: colors.neutral.grey,
+                      marginTop: spacing.xs
+                    }}
+                  >
+                    Supported formats: MP4, MOV, AVI, MPEG, WebM (max 200MB)
+                  </p>
                 </>
               )}
-            </div>
+            </label>
+
+            {fileError && (
+              <div
+                style={{
+                  color: colors.status.error,
+                  backgroundColor: `${colors.status.error}15`,
+                  padding: spacing.sm,
+                  borderRadius: borderRadius.md,
+                  marginTop: spacing.sm,
+                  fontSize: typography.fontSize.sm
+                }}
+              >
+                {fileError}
+              </div>
+            )}
           </div>
         )}
       </motion.div>
