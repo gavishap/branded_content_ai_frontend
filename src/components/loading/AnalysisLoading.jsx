@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   colors,
+  gradients,
   spacing,
   borderRadius,
   shadows,
@@ -93,35 +94,48 @@ const AnalysisLoading = ({
   }, [containerBounds]);
 
   // Generate particle array
-  const particles = Array.from({ length: 25 }, (_, i) => ({
+  const particles = Array.from({ length: 30 }, (_, i) => ({
     id: i,
-    size: Math.random() * 8 + 4,
+    size: Math.random() * 12 + 4,
     color:
-      i % 3 === 0
-        ? colors.primary.light
-        : i % 3 === 1
+      i % 4 === 0
+        ? colors.accent.teal
+        : i % 4 === 1
         ? colors.primary.main
-        : colors.accent.blue,
+        : i % 4 === 2
+        ? colors.accent.purple
+        : colors.accent.pink,
     initialX: Math.random() * 100,
-    initialY: Math.random() * 100
+    initialY: Math.random() * 100,
+    speed: Math.random() * 5 + 2
   }));
 
   const getProgressColor = () => {
-    if (progress < 30) return colors.primary.light;
-    if (progress < 60) return colors.primary.main;
-    if (progress < 90) return colors.accent.blue;
-    return colors.accent.green;
+    if (progress < 30) return colors.primary.main;
+    if (progress < 60) return colors.accent.purple;
+    if (progress < 90) return colors.accent.pink;
+    return colors.accent.teal;
   };
 
-  // Enhanced steps timeline
+  // Enhanced steps timeline with modern styling
   const renderProgressTimeline = () => {
     // Define the major milestones
     const milestones = [
-      { pct: 0, label: 'Start', status: 'initializing' },
-      { pct: 20, label: 'Download', status: 'download_complete' },
-      { pct: 40, label: 'AI Processing', status: 'processing_with_ai_models' },
-      { pct: 70, label: 'Analysis', status: 'generating_unified_analysis' },
-      { pct: 100, label: 'Complete', status: 'completed' }
+      { pct: 0, label: 'Start', status: 'initializing', icon: '🚀' },
+      { pct: 20, label: 'Download', status: 'download_complete', icon: '📥' },
+      {
+        pct: 40,
+        label: 'AI Processing',
+        status: 'processing_with_ai_models',
+        icon: '🧠'
+      },
+      {
+        pct: 70,
+        label: 'Analysis',
+        status: 'generating_unified_analysis',
+        icon: '📊'
+      },
+      { pct: 100, label: 'Complete', status: 'completed', icon: '✅' }
     ];
 
     return (
@@ -141,32 +155,46 @@ const AnalysisLoading = ({
             marginBottom: spacing.md
           }}
         >
-          {/* Progress bar */}
+          {/* Progress bar background with gradient */}
           <div
             style={{
               position: 'absolute',
-              height: '4px',
-              backgroundColor: `${colors.neutral.lightGrey}`,
+              height: '6px',
+              background: `linear-gradient(to right, ${colors.neutral.lightGrey}20, ${colors.neutral.lightGrey}40)`,
               width: '100%',
-              top: '8px',
-              zIndex: 1
+              top: '10px',
+              zIndex: 1,
+              borderRadius: '3px'
             }}
           />
 
-          {/* Progress fill */}
+          {/* Progress fill with animated gradient */}
           <motion.div
             style={{
               position: 'absolute',
-              height: '4px',
-              backgroundColor: getProgressColor(),
+              height: '6px',
+              background: `linear-gradient(to right, ${colors.primary.main}, ${colors.accent.purple}, ${colors.accent.teal})`,
+              backgroundSize: '200% 200%',
               width: `${progress}%`,
-              top: '8px',
+              top: '10px',
               zIndex: 2,
-              borderRadius: '2px'
+              borderRadius: '3px',
+              boxShadow: '0 0 10px rgba(67, 97, 238, 0.5)'
             }}
             initial={{ width: '0%' }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5 }}
+            animate={{
+              width: `${progress}%`,
+              backgroundPosition: ['0% 0%', '100% 0%', '0% 0%']
+            }}
+            transition={{
+              width: { duration: 0.5 },
+              backgroundPosition: {
+                duration: 3,
+                repeat: Infinity,
+                repeatType: 'loop',
+                ease: 'linear'
+              }
+            }}
           />
 
           {/* Milestone markers */}
@@ -194,25 +222,36 @@ const AnalysisLoading = ({
               >
                 <motion.div
                   style={{
-                    width: '20px',
-                    height: '20px',
+                    width: '26px',
+                    height: '26px',
                     borderRadius: '50%',
                     backgroundColor: isPassed
                       ? getProgressColor()
-                      : colors.neutral.lightGrey,
+                      : colors.neutral.background,
+                    border: `2px solid ${
+                      isPassed ? getProgressColor() : colors.neutral.lightGrey
+                    }`,
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     boxShadow: isActive
-                      ? `0 0 0 4px ${colors.primary.light}30`
-                      : 'none',
-                    transition: 'all 0.3s ease'
+                      ? `0 0 0 6px ${colors.primary.light}30, 0 0 20px rgba(114, 9, 183, 0.4)`
+                      : isPassed
+                      ? shadows.glow
+                      : 'none'
                   }}
                   animate={{
-                    scale: isActive ? 1.2 : 1,
+                    scale: isActive ? [1, 1.1, 1] : 1,
                     backgroundColor: isPassed
                       ? getProgressColor()
-                      : colors.neutral.lightGrey
+                      : colors.neutral.background
+                  }}
+                  transition={{
+                    scale: {
+                      duration: 2,
+                      repeat: isActive ? Infinity : 0,
+                      repeatType: 'loop'
+                    }
                   }}
                 >
                   {isPassed && (
@@ -221,33 +260,32 @@ const AnalysisLoading = ({
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
-                          fill="white"
-                        />
-                      </svg>
+                      {milestone.icon}
                     </motion.div>
                   )}
                 </motion.div>
-                <div
+                <motion.div
                   style={{
                     marginTop: spacing.xs,
-                    fontSize: typography.fontSize.xs,
+                    fontSize: typography.fontSize.sm,
                     color: isPassed
                       ? colors.primary.dark
                       : colors.neutral.darkGrey,
                     fontWeight: isActive ? 'bold' : 'normal'
                   }}
+                  animate={{
+                    y: isActive ? [0, -3, 0] : 0
+                  }}
+                  transition={{
+                    y: {
+                      duration: 2,
+                      repeat: isActive ? Infinity : 0,
+                      repeatType: 'loop'
+                    }
+                  }}
                 >
                   {milestone.label}
-                </div>
+                </motion.div>
               </div>
             );
           })}
@@ -256,352 +294,361 @@ const AnalysisLoading = ({
     );
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        when: 'beforeChildren',
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { type: 'spring', damping: 12 }
+    }
+  };
+
+  // Render different analysis modules being processed
+  const renderAnalysisModules = () => {
+    const modules = [
+      {
+        id: 'gemini',
+        name: 'Gemini AI',
+        description: 'Analyzing narratives & performance',
+        progress:
+          status === 'running_gemini_analysis'
+            ? Math.min(progress * 1.5, 100)
+            : status === 'gemini_analysis_complete'
+            ? 100
+            : Math.min(progress * 0.8, 90),
+        color: colors.primary.main,
+        icon: '🧠'
+      },
+      {
+        id: 'clarifai',
+        name: 'ClarifAI Models',
+        description: 'Processing visual elements',
+        progress:
+          status === 'running_clarifai_analysis'
+            ? Math.min(progress * 1.5, 100)
+            : status === 'clarifai_analysis_complete'
+            ? 100
+            : Math.min(progress * 0.7, 85),
+        color: colors.accent.purple,
+        icon: '👁️'
+      }
+    ];
+
+    return (
+      <div style={{ marginTop: spacing.lg }}>
+        {modules.map(module => (
+          <motion.div
+            key={module.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 12 }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: spacing.md,
+              backgroundColor: colors.neutral.white,
+              padding: spacing.sm,
+              borderRadius: borderRadius.lg,
+              boxShadow: shadows.sm
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '40px',
+                height: '40px',
+                backgroundColor: `${module.color}15`,
+                borderRadius: borderRadius.md,
+                marginRight: spacing.md,
+                fontSize: '20px'
+              }}
+            >
+              {module.icon}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div
+                  style={{
+                    fontSize: typography.fontSize.md,
+                    fontWeight: typography.fontWeights.medium,
+                    color: colors.neutral.black
+                  }}
+                >
+                  {module.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: typography.fontSize.sm,
+                    color: colors.neutral.darkGrey
+                  }}
+                >
+                  {Math.round(module.progress)}%
+                </div>
+              </div>
+              <div
+                style={{
+                  fontSize: typography.fontSize.sm,
+                  color: colors.neutral.darkGrey,
+                  marginBottom: spacing.xs
+                }}
+              >
+                {module.description}
+              </div>
+              <motion.div
+                style={{
+                  height: '6px',
+                  backgroundColor: colors.neutral.lightGrey,
+                  borderRadius: borderRadius.full,
+                  overflow: 'hidden'
+                }}
+              >
+                <motion.div
+                  style={{
+                    height: '100%',
+                    backgroundImage: `linear-gradient(to right, ${module.color}, ${colors.accent.teal})`,
+                    backgroundSize: '200% 100%',
+                    borderRadius: borderRadius.full
+                  }}
+                  initial={{ width: '0%' }}
+                  animate={{
+                    width: `${module.progress}%`,
+                    backgroundPosition: ['0% 0%', '100% 0%']
+                  }}
+                  transition={{
+                    width: { duration: 0.8 },
+                    backgroundPosition: {
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatType: 'reverse',
+                      ease: 'linear'
+                    }
+                  }}
+                />
+              </motion.div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <motion.div
       ref={containerRef}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
       style={{
-        width: '100%',
-        height: '100vh',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.neutral.background,
+        justifyContent: 'center',
+        height: '100vh',
+        padding: spacing.xl,
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        background: `radial-gradient(circle at center, ${colors.neutral.background} 0%, #f0f4f8 100%)`
       }}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
     >
-      {/* Floating particles that respond to mouse movement */}
-      {particles.map(particle => (
+      {/* Dynamic particles */}
+      {particles.map((particle, index) => (
         <motion.div
-          key={particle.id}
-          initial={{
-            x: `${particle.initialX}%`,
-            y: `${particle.initialY}%`,
-            opacity: 0.2
-          }}
-          animate={{
-            x: mousePosition.x
-              ? `calc(${particle.initialX}% + ${
-                  (mousePosition.x - containerBounds.width / 2) / 20
-                }px)`
-              : `${particle.initialX}%`,
-            y: mousePosition.y
-              ? `calc(${particle.initialY}% + ${
-                  (mousePosition.y - containerBounds.height / 2) / 20
-                }px)`
-              : `${particle.initialY}%`,
-            opacity: 0.5 + (Math.sin(Date.now() / 1000 + particle.id) + 1) / 4
-          }}
-          transition={{
-            duration: 0.5,
-            ease: 'easeOut'
-          }}
+          key={index}
           style={{
             position: 'absolute',
             width: particle.size,
             height: particle.size,
             borderRadius: '50%',
             backgroundColor: particle.color,
-            filter: 'blur(1px)'
+            opacity: 0.5,
+            filter: `blur(${particle.size / 3}px)`,
+            x: `${particle.initialX}%`,
+            y: `${particle.initialY}%`
+          }}
+          animate={{
+            x: [
+              `${particle.initialX}%`,
+              `${
+                particle.initialX +
+                (mousePosition.x / containerBounds.width) * 20
+              }%`,
+              `${particle.initialX}%`
+            ],
+            y: [
+              `${particle.initialY}%`,
+              `${
+                particle.initialY +
+                (mousePosition.y / containerBounds.height) * 20
+              }%`,
+              `${particle.initialY}%`
+            ],
+            opacity: [0.3, 0.7, 0.3]
+          }}
+          transition={{
+            duration: particle.speed,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut'
           }}
         />
       ))}
 
+      {/* Main content container with glass effect */}
       <motion.div
+        className="glass"
         style={{
-          backgroundColor: colors.neutral.white,
-          borderRadius: borderRadius.lg,
-          padding: spacing.xl,
-          boxShadow: shadows.lg,
-          textAlign: 'center',
           maxWidth: '700px',
-          width: '90%',
-          zIndex: 10
+          width: '100%',
+          padding: spacing.xl,
+          borderRadius: borderRadius['2xl'],
+          boxShadow: shadows.xl,
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
         }}
+        variants={itemVariants}
       >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.2 }}
+        <motion.h1
+          className="gradient-text"
+          style={{
+            fontSize: typography.fontSize['3xl'],
+            fontWeight: typography.fontWeights.bold,
+            marginBottom: spacing.md,
+            textAlign: 'center'
+          }}
+          variants={itemVariants}
         >
-          <h2
-            style={{
-              fontSize: typography.fontSize.xl,
-              color: colors.primary.dark,
-              marginBottom: spacing.lg
-            }}
-          >
-            Analyzing {type === 'url' ? 'URL' : 'Video'}
-          </h2>
+          Analyzing Video
+        </motion.h1>
 
-          {contentName && (
-            <p
-              style={{
-                fontSize: typography.fontSize.md,
-                color: colors.neutral.darkGrey,
-                marginBottom: spacing.md
-              }}
-            >
-              {type === 'url' ? contentName : `File: ${contentName}`}
-            </p>
-          )}
-
-          <div
-            style={{
-              width: '100%',
-              height: '8px',
-              backgroundColor: `${colors.primary.light}50`,
-              borderRadius: borderRadius.md,
-              overflow: 'hidden',
-              marginBottom: spacing.md
-            }}
-          >
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ ease: 'easeOut' }}
-              style={{
-                height: '100%',
-                backgroundColor: colors.primary.main,
-                borderRadius: borderRadius.md
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              fontSize: typography.fontSize.lg,
-              fontWeight: 'bold',
-              color: colors.primary.dark,
-              marginBottom: spacing.md
-            }}
-          >
-            {progress}% Complete
-          </div>
-
-          <motion.div
-            key={status || currentStep}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            style={{
-              fontSize: typography.fontSize.md,
-              color: colors.accent.blue,
-              marginBottom: spacing.lg,
-              minHeight: '30px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <div
-              style={{
-                width: '20px',
-                height: '20px',
-                marginRight: spacing.sm,
-                borderRadius: '50%',
-                border: `2px solid ${colors.accent.blue}`,
-                borderTopColor: 'transparent',
-                animation: 'spin 1s linear infinite'
-              }}
-            />
-            {getStatusMessage()}
-          </motion.div>
-
-          {/* Progress Timeline */}
-          {renderProgressTimeline()}
-
-          {/* Processing steps - only need this section once */}
-          {progress > 20 && progress < 70 && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginTop: spacing.md,
-                marginBottom: spacing.lg,
-                backgroundColor: `${colors.primary.light}20`,
-                padding: spacing.md,
-                borderRadius: borderRadius.md
-              }}
-            >
-              <div
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  padding: spacing.sm,
-                  borderRight: `1px solid ${colors.neutral.lightGrey}`
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontWeight: 'bold',
-                    color: colors.primary.dark
-                  }}
-                >
-                  Gemini AI
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: typography.fontSize.sm,
-                    color: colors.neutral.darkGrey
-                  }}
-                >
-                  Analyzing narratives & performance
-                </p>
-                <div
-                  style={{
-                    margin: `${spacing.xs} auto`,
-                    width: '80%',
-                    height: '6px',
-                    backgroundColor: `${colors.primary.light}30`,
-                    borderRadius: borderRadius.md,
-                    overflow: 'hidden'
-                  }}
-                >
-                  <motion.div
-                    animate={{
-                      width:
-                        status === 'gemini_analysis_complete'
-                          ? '100%'
-                          : status === 'running_gemini_analysis'
-                          ? '50%'
-                          : '10%'
-                    }}
-                    transition={{ ease: 'easeOut' }}
-                    style={{
-                      height: '100%',
-                      backgroundColor:
-                        status === 'gemini_analysis_complete'
-                          ? colors.accent.green
-                          : colors.primary.main,
-                      borderRadius: borderRadius.md
-                    }}
-                  />
-                </div>
-              </div>
-              <div
-                style={{
-                  flex: 1,
-                  textAlign: 'center',
-                  padding: spacing.sm
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontWeight: 'bold',
-                    color: colors.primary.dark
-                  }}
-                >
-                  ClarifAI Models
-                </p>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: typography.fontSize.sm,
-                    color: colors.neutral.darkGrey
-                  }}
-                >
-                  Processing visual elements
-                </p>
-                <div
-                  style={{
-                    margin: `${spacing.xs} auto`,
-                    width: '80%',
-                    height: '6px',
-                    backgroundColor: `${colors.primary.light}30`,
-                    borderRadius: borderRadius.md,
-                    overflow: 'hidden'
-                  }}
-                >
-                  <motion.div
-                    animate={{
-                      width:
-                        status === 'clarifai_analysis_complete'
-                          ? '100%'
-                          : status === 'processing_with_ai_models'
-                          ? '75%'
-                          : status === 'running_clarifai_analysis'
-                          ? '50%'
-                          : '10%'
-                    }}
-                    transition={{ ease: 'easeOut' }}
-                    style={{
-                      height: '100%',
-                      backgroundColor:
-                        status === 'clarifai_analysis_complete'
-                          ? colors.accent.green
-                          : colors.primary.main,
-                      borderRadius: borderRadius.md
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Continue to dashboard button - appears when analysis is complete */}
-          {progress >= 100 && status === 'completed' && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-              style={{
-                marginTop: spacing.lg,
-                width: '100%',
-                display: 'flex',
-                justifyContent: 'center'
-              }}
-            >
-              <button
-                onClick={onCompleteClick}
-                style={{
-                  backgroundColor: colors.accent.green,
-                  color: 'white',
-                  padding: `${spacing.md} ${spacing.lg}`,
-                  borderRadius: borderRadius.md,
-                  border: 'none',
-                  fontSize: typography.fontSize.md,
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  boxShadow: shadows.md,
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'scale(1.05)';
-                  e.currentTarget.style.boxShadow = shadows.lg;
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'scale(1)';
-                  e.currentTarget.style.boxShadow = shadows.md;
-                }}
-              >
-                View Analysis Dashboard
-                <span style={{ marginLeft: spacing.sm }}>→</span>
-              </button>
-            </motion.div>
-          )}
+        <motion.div
+          style={{
+            fontSize: typography.fontSize.lg,
+            color: colors.neutral.black,
+            marginBottom: spacing.lg,
+            textAlign: 'center',
+            fontWeight: typography.fontWeights.medium
+          }}
+          variants={itemVariants}
+        >
+          File: {contentName}
         </motion.div>
-      </motion.div>
 
-      {/* Add a style tag for the spinning animation */}
-      <style>{`
-        @keyframes spin {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-      `}</style>
+        {/* Progress bar with animated gradient */}
+        <motion.div
+          style={{
+            width: '100%',
+            height: '8px',
+            backgroundColor: `${colors.neutral.lightGrey}30`,
+            borderRadius: borderRadius.full,
+            marginBottom: spacing.md,
+            overflow: 'hidden'
+          }}
+          variants={itemVariants}
+        >
+          <motion.div
+            className="progress-bar"
+            style={{
+              height: '100%',
+              width: `${progress}%`,
+              borderRadius: borderRadius.full
+            }}
+            initial={{ width: 0 }}
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.5 }}
+          />
+        </motion.div>
+
+        <motion.div
+          style={{
+            fontSize: typography.fontSize.xl,
+            fontWeight: typography.fontWeights.medium,
+            color: colors.primary.dark,
+            textAlign: 'center',
+            marginBottom: spacing.lg
+          }}
+          variants={itemVariants}
+        >
+          {progress}% Complete
+        </motion.div>
+
+        <motion.div
+          style={{
+            fontSize: typography.fontSize.md,
+            color: colors.neutral.darkGrey,
+            textAlign: 'center',
+            marginBottom: spacing.xl
+          }}
+          variants={itemVariants}
+        >
+          {getStatusMessage()}
+        </motion.div>
+
+        {/* Timeline */}
+        <motion.div variants={itemVariants}>
+          {renderProgressTimeline()}
+        </motion.div>
+
+        {/* Analysis modules */}
+        <motion.div variants={itemVariants}>
+          {renderAnalysisModules()}
+        </motion.div>
+
+        {/* Complete button */}
+        {progress >= 100 && (
+          <motion.div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginTop: spacing.xl
+            }}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{
+              type: 'spring',
+              stiffness: 400,
+              damping: 10
+            }}
+          >
+            <motion.button
+              onClick={onCompleteClick}
+              style={{
+                padding: `${spacing.md}px ${spacing.lg}px`,
+                background: gradients.primary,
+                color: colors.neutral.white,
+                border: 'none',
+                borderRadius: borderRadius.lg,
+                fontSize: typography.fontSize.md,
+                fontWeight: typography.fontWeights.medium,
+                cursor: 'pointer',
+                boxShadow: shadows.lg,
+                transition: 'all 0.3s ease'
+              }}
+              whileHover={{
+                scale: 1.05,
+                boxShadow: shadows.glow
+              }}
+              whileTap={{ scale: 0.98 }}
+            >
+              View Analysis Results
+            </motion.button>
+          </motion.div>
+        )}
+      </motion.div>
     </motion.div>
   );
 };

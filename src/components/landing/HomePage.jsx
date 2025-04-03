@@ -3,12 +3,15 @@ import { motion } from 'framer-motion';
 import SavedAnalysesList from './SavedAnalysesList';
 import {
   colors,
+  gradients,
   spacing,
   borderRadius,
   shadows,
-  typography
+  typography,
+  animations
 } from '../../utils/theme';
-import { FiUpload } from 'react-icons/fi';
+import { FiUpload, FiLink, FiPlay } from 'react-icons/fi';
+import './HomePage.css'; // Import CSS file for custom styles
 
 // Define accepted video MIME types
 const ALLOWED_VIDEO_TYPES = [
@@ -158,7 +161,7 @@ const HomePage = ({ onStartAnalysis }) => {
     visible: {
       opacity: 1,
       transition: {
-        delay: 0.3,
+        delay: 0.2,
         when: 'beforeChildren',
         staggerChildren: 0.1
       }
@@ -169,9 +172,38 @@ const HomePage = ({ onStartAnalysis }) => {
     hidden: { y: 20, opacity: 0 },
     visible: {
       y: 0,
-      opacity: 1
+      opacity: 1,
+      transition: {
+        type: 'spring',
+        damping: 12
+      }
     }
   };
+
+  // Background gradient circles for visual enhancement
+  const decorativeCircles = [
+    {
+      size: 300,
+      top: -100,
+      left: -150,
+      color: colors.accent.purple,
+      opacity: 0.1
+    },
+    {
+      size: 200,
+      bottom: -50,
+      right: -100,
+      color: colors.accent.teal,
+      opacity: 0.15
+    },
+    {
+      size: 150,
+      top: '40%',
+      right: '5%',
+      color: colors.primary.main,
+      opacity: 0.12
+    }
+  ];
 
   return (
     <motion.div
@@ -179,39 +211,98 @@ const HomePage = ({ onStartAnalysis }) => {
       animate="visible"
       variants={containerVariants}
       style={{
-        maxWidth: '900px',
+        maxWidth: '1000px',
         margin: '0 auto',
-        padding: spacing.xl
+        padding: spacing.xl,
+        position: 'relative',
+        overflow: 'hidden',
+        minHeight: '100vh'
       }}
     >
+      {/* Decorative background circles */}
+      {decorativeCircles.map((circle, index) => (
+        <motion.div
+          key={index}
+          style={{
+            position: 'absolute',
+            width: circle.size,
+            height: circle.size,
+            borderRadius: '50%',
+            background: `radial-gradient(circle at center, ${circle.color} 0%, transparent 70%)`,
+            opacity: circle.opacity,
+            top: circle.top,
+            left: circle.left,
+            right: circle.right,
+            bottom: circle.bottom,
+            zIndex: -1
+          }}
+          animate={{
+            scale: [1, 1.05, 1],
+            opacity: [circle.opacity, circle.opacity * 1.5, circle.opacity]
+          }}
+          transition={{
+            duration: 8 + index * 2,
+            repeat: Infinity,
+            repeatType: 'reverse',
+            ease: 'easeInOut'
+          }}
+        />
+      ))}
+
       <motion.div
         variants={itemVariants}
+        className="glow"
         style={{
           textAlign: 'center',
-          marginBottom: spacing.xl
+          marginBottom: spacing.xxl,
+          position: 'relative'
         }}
       >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6 }}
+          style={{
+            position: 'absolute',
+            top: -30,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '150px',
+            height: '150px',
+            background: `linear-gradient(45deg, ${colors.accent.purple}30, ${colors.primary.main}30)`,
+            borderRadius: '50%',
+            filter: 'blur(40px)',
+            zIndex: -1
+          }}
+        />
+
         <h1
           style={{
-            fontSize: typography.fontSize.xxl,
-            color: colors.primary.dark,
+            fontSize: typography.fontSize.xxxl,
+            background: gradients.purpleBlue,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
             margin: 0,
-            marginBottom: spacing.sm
+            marginBottom: spacing.md,
+            fontWeight: typography.fontWeights.bold,
+            textShadow: '0 2px 10px rgba(0,0,0,0.1)'
           }}
         >
           Branded Content Analysis
         </h1>
-        <p
+
+        <motion.p
           style={{
-            fontSize: typography.fontSize.lg,
+            fontSize: typography.fontSize.xl,
             color: colors.neutral.darkGrey,
-            maxWidth: '600px',
-            margin: '0 auto'
+            maxWidth: '700px',
+            margin: '0 auto',
+            lineHeight: 1.5
           }}
         >
           Get AI-powered insights on your branded videos to optimize engagement
           and performance
-        </p>
+        </motion.p>
       </motion.div>
 
       <motion.div variants={itemVariants}>
@@ -225,64 +316,86 @@ const HomePage = ({ onStartAnalysis }) => {
           justifyContent: 'center',
           marginBottom: spacing.xl
         }}
+        className="glass"
       >
-        <button
+        <motion.button
           onClick={() => setInputMethod('url')}
+          whileHover={{ scale: 1.03, boxShadow: shadows.glow }}
+          whileTap={{ scale: 0.98 }}
           style={{
-            padding: `${spacing.sm} ${spacing.lg}`,
-            margin: `0 ${spacing.sm}`,
+            padding: `${spacing.md} ${spacing.xl}`,
+            margin: `0 ${spacing.md}`,
             background:
               inputMethod === 'url'
-                ? colors.primary.main
-                : colors.neutral.white,
+                ? gradients.purpleBlue
+                : 'rgba(255, 255, 255, 0.8)',
             color:
               inputMethod === 'url'
                 ? colors.neutral.white
                 : colors.neutral.darkGrey,
-            border: `2px solid ${colors.primary.main}`,
-            borderRadius: borderRadius.md,
-            fontSize: typography.fontSize.md,
+            border: 'none',
+            borderRadius: borderRadius.lg,
+            fontSize: typography.fontSize.lg,
+            fontWeight: typography.fontWeights.medium,
             cursor: 'pointer',
             boxShadow: inputMethod === 'url' ? shadows.md : 'none',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.sm,
+            minWidth: '150px',
+            justifyContent: 'center'
           }}
         >
-          URL
-        </button>
-        <button
+          <FiLink size={20} /> URL
+        </motion.button>
+
+        <motion.button
           onClick={() => setInputMethod('file')}
+          whileHover={{ scale: 1.03, boxShadow: shadows.glow }}
+          whileTap={{ scale: 0.98 }}
           style={{
-            padding: `${spacing.sm} ${spacing.lg}`,
-            margin: `0 ${spacing.sm}`,
+            padding: `${spacing.md} ${spacing.xl}`,
+            margin: `0 ${spacing.md}`,
             background:
               inputMethod === 'file'
-                ? colors.primary.main
-                : colors.neutral.white,
+                ? gradients.blueTeal
+                : 'rgba(255, 255, 255, 0.8)',
             color:
               inputMethod === 'file'
                 ? colors.neutral.white
                 : colors.neutral.darkGrey,
-            border: `2px solid ${colors.primary.main}`,
-            borderRadius: borderRadius.md,
-            fontSize: typography.fontSize.md,
+            border: 'none',
+            borderRadius: borderRadius.lg,
+            fontSize: typography.fontSize.lg,
+            fontWeight: typography.fontWeights.medium,
             cursor: 'pointer',
             boxShadow: inputMethod === 'file' ? shadows.md : 'none',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: spacing.sm,
+            minWidth: '150px',
+            justifyContent: 'center'
           }}
         >
-          Upload File
-        </button>
+          <FiUpload size={20} /> Upload File
+        </motion.button>
       </motion.div>
 
       <motion.div
         variants={itemVariants}
         style={{
-          backgroundColor: colors.neutral.white,
-          padding: spacing.lg,
-          borderRadius: borderRadius.lg,
-          boxShadow: shadows.md,
-          marginBottom: spacing.xl
+          backgroundColor: 'rgba(255, 255, 255, 0.7)',
+          padding: spacing.xl,
+          borderRadius: borderRadius['2xl'],
+          boxShadow: shadows.lg,
+          marginBottom: spacing.xl,
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.2)'
         }}
+        className="glass"
       >
         {inputMethod === 'url' ? (
           <div>
@@ -290,28 +403,88 @@ const HomePage = ({ onStartAnalysis }) => {
               htmlFor="url-input"
               style={{
                 display: 'block',
-                fontSize: typography.fontSize.md,
+                fontSize: typography.fontSize.xl,
+                fontWeight: typography.fontWeights.medium,
                 color: colors.primary.dark,
-                marginBottom: spacing.sm
-              }}
-            >
-              Enter video URL:
-            </label>
-            <input
-              id="url-input"
-              type="text"
-              value={url}
-              onChange={handleUrlChange}
-              placeholder="https://example.com/video"
-              style={{
-                width: '100%',
-                padding: spacing.md,
-                fontSize: typography.fontSize.md,
-                border: `1px solid ${colors.neutral.lightGrey}`,
-                borderRadius: borderRadius.md,
                 marginBottom: spacing.md
               }}
-            />
+            >
+              <span
+                style={{
+                  background: gradients.purpleBlue,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent'
+                }}
+              >
+                Enter video URL:
+              </span>
+            </label>
+            <div
+              style={{
+                position: 'relative',
+                marginBottom: spacing.xl
+              }}
+            >
+              <input
+                id="url-input"
+                type="text"
+                value={url}
+                onChange={handleUrlChange}
+                placeholder="https://example.com/video"
+                className="url-input-field"
+                style={{
+                  width: '100%',
+                  padding: `${spacing.lg} ${spacing.xxl}`,
+                  paddingLeft: `${spacing.xxl + spacing.md}`,
+                  fontSize: typography.fontSize.lg,
+                  border: `2px solid ${
+                    inputMethod === 'url' && url
+                      ? colors.primary.main
+                      : colors.neutral.lightGrey
+                  }`,
+                  borderRadius: borderRadius.xl,
+                  transition: 'all 0.3s ease',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+                  outline: 'none',
+                  height: '60px'
+                }}
+              />
+              <FiLink
+                style={{
+                  position: 'absolute',
+                  left: spacing.xl,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: colors.primary.main
+                }}
+                size={24}
+              />
+            </div>
+
+            <div
+              style={{
+                padding: spacing.lg,
+                backgroundColor: `${colors.accent.purple}15`,
+                borderRadius: borderRadius.xl,
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.md,
+                marginBottom: spacing.md
+              }}
+            >
+              <FiPlay size={30} style={{ color: colors.accent.purple }} />
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: typography.fontSize.md,
+                  color: colors.neutral.darkGrey,
+                  lineHeight: 1.5
+                }}
+              >
+                Supports YouTube, Vimeo, and direct video links. For best
+                results, ensure your video is publicly accessible.
+              </p>
+            </div>
           </div>
         ) : (
           <div
@@ -320,16 +493,9 @@ const HomePage = ({ onStartAnalysis }) => {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             style={{
-              border: `2px dashed ${
-                dragging ? colors.primary.main : colors.neutral.lightGrey
-              }`,
-              borderRadius: borderRadius.lg,
-              padding: spacing.xl,
+              borderRadius: borderRadius.xl,
+              padding: spacing.lg,
               textAlign: 'center',
-              backgroundColor: dragging
-                ? `${colors.primary.light}20`
-                : 'transparent',
-              transition: 'all 0.3s ease',
               cursor: 'pointer'
             }}
             onClick={handleButtonClick}
@@ -342,26 +508,38 @@ const HomePage = ({ onStartAnalysis }) => {
               style={{ display: 'none' }}
               accept=".mp4,.mov,.avi,.mpeg,.webm,video/mp4,video/quicktime,video/x-msvideo,video/mpeg,video/webm"
             />
-            <label
+            <motion.label
               htmlFor="file-input"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                height: '200px',
-                borderRadius: borderRadius.lg,
+                height: '240px',
+                borderRadius: borderRadius.xl,
                 border: '2px dashed',
                 borderColor: dragging
                   ? colors.primary.main
                   : colors.neutral.lightGrey,
                 backgroundColor: dragging
-                  ? `${colors.primary.light}30`
-                  : colors.neutral.white,
+                  ? `${colors.primary.light}20`
+                  : 'rgba(255, 255, 255, 0.5)',
                 color: colors.neutral.darkGrey,
                 cursor: 'pointer',
                 transition: 'all 0.3s',
-                padding: spacing.lg
+                padding: spacing.xl
+              }}
+              animate={{
+                borderColor: dragging
+                  ? colors.primary.main
+                  : colors.neutral.lightGrey,
+                backgroundColor: dragging
+                  ? `${colors.primary.light}20`
+                  : 'rgba(255, 255, 255, 0.5)'
+              }}
+              whileHover={{
+                backgroundColor: `${colors.primary.light}10`,
+                boxShadow: shadows.glow
               }}
               onDragEnter={handleDragEnter}
               onDragOver={handleDragOver}
@@ -370,67 +548,130 @@ const HomePage = ({ onStartAnalysis }) => {
             >
               {file ? (
                 <>
-                  <FiUpload size={24} color={colors.primary.main} />
-                  <p
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 260,
+                      damping: 20
+                    }}
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '50%',
+                      backgroundColor: `${colors.primary.main}15`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: spacing.md
+                    }}
+                  >
+                    <FiUpload size={32} color={colors.primary.main} />
+                  </motion.div>
+                  <motion.p
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     style={{
                       marginTop: spacing.sm,
-                      textAlign: 'center',
-                      fontWeight: 'bold'
+                      fontSize: typography.fontSize.lg,
+                      fontWeight: typography.fontWeights.medium,
+                      color: colors.primary.dark
                     }}
                   >
                     Selected: {file.name}
-                  </p>
-                  <p
+                  </motion.p>
+                  <motion.p
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
                     style={{
-                      fontSize: typography.fontSize.sm,
+                      fontSize: typography.fontSize.md,
                       color: colors.neutral.grey,
                       marginTop: spacing.xs
                     }}
                   >
                     {(file.size / (1024 * 1024)).toFixed(2)} MB
-                  </p>
-                  <p
+                  </motion.p>
+                  <motion.p
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
                     style={{
-                      fontSize: typography.fontSize.sm,
+                      fontSize: typography.fontSize.md,
                       color: colors.status.success,
-                      marginTop: spacing.xs
+                      marginTop: spacing.xs,
+                      fontWeight: typography.fontWeights.medium
                     }}
                   >
                     Ready to upload - click "Analyze" below
-                  </p>
+                  </motion.p>
                 </>
               ) : (
                 <>
-                  <FiUpload size={32} color={colors.primary.main} />
-                  <p style={{ marginTop: spacing.md, textAlign: 'center' }}>
-                    Drag and drop your video file here or click to browse
-                  </p>
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatType: 'reverse'
+                    }}
+                    style={{
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '50%',
+                      backgroundColor: `${colors.primary.main}15`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: spacing.lg
+                    }}
+                  >
+                    <FiUpload size={40} color={colors.primary.main} />
+                  </motion.div>
+
                   <p
                     style={{
-                      fontSize: typography.fontSize.sm,
-                      color: colors.neutral.grey,
-                      marginTop: spacing.xs
+                      fontSize: typography.fontSize.lg,
+                      marginTop: spacing.md,
+                      textAlign: 'center',
+                      fontWeight: typography.fontWeights.medium,
+                      color: colors.primary.dark
+                    }}
+                  >
+                    Drag and drop your video file here or click to browse
+                  </p>
+
+                  <p
+                    style={{
+                      fontSize: typography.fontSize.md,
+                      color: colors.neutral.darkGrey,
+                      marginTop: spacing.sm
                     }}
                   >
                     Supported formats: MP4, MOV, AVI, MPEG, WebM (max 200MB)
                   </p>
                 </>
               )}
-            </label>
+            </motion.label>
 
             {fileError && (
-              <div
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
                 style={{
                   color: colors.status.error,
                   backgroundColor: `${colors.status.error}15`,
-                  padding: spacing.sm,
-                  borderRadius: borderRadius.md,
-                  marginTop: spacing.sm,
-                  fontSize: typography.fontSize.sm
+                  padding: spacing.md,
+                  borderRadius: borderRadius.lg,
+                  marginTop: spacing.md,
+                  fontSize: typography.fontSize.md,
+                  fontWeight: typography.fontWeights.medium,
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.2)'
                 }}
               >
                 {fileError}
-              </div>
+              </motion.div>
             )}
           </div>
         )}
@@ -443,34 +684,65 @@ const HomePage = ({ onStartAnalysis }) => {
           justifyContent: 'center'
         }}
       >
-        <button
+        <motion.button
           onClick={handleSubmit}
           disabled={
             (inputMethod === 'url' && !url) || (inputMethod === 'file' && !file)
           }
+          whileHover={{
+            scale:
+              (inputMethod === 'url' && !url) ||
+              (inputMethod === 'file' && !file)
+                ? 1
+                : 1.05,
+            boxShadow:
+              (inputMethod === 'url' && !url) ||
+              (inputMethod === 'file' && !file)
+                ? 'none'
+                : shadows.glow
+          }}
+          whileTap={{
+            scale:
+              (inputMethod === 'url' && !url) ||
+              (inputMethod === 'file' && !file)
+                ? 1
+                : 0.95
+          }}
           style={{
-            padding: `${spacing.md} ${spacing.xl}`,
+            padding: `${spacing.lg} ${spacing.xxl}`,
             background:
               (inputMethod === 'url' && !url) ||
               (inputMethod === 'file' && !file)
                 ? colors.neutral.lightGrey
-                : colors.accent.green,
+                : gradients.futuristic,
             color: colors.neutral.white,
             border: 'none',
-            borderRadius: borderRadius.md,
-            fontSize: typography.fontSize.lg,
-            fontWeight: 'bold',
+            borderRadius: borderRadius.full,
+            fontSize: typography.fontSize.xl,
+            fontWeight: typography.fontWeights.bold,
             cursor:
               (inputMethod === 'url' && !url) ||
               (inputMethod === 'file' && !file)
                 ? 'not-allowed'
                 : 'pointer',
-            boxShadow: shadows.md,
-            transition: 'all 0.3s ease'
+            boxShadow:
+              (inputMethod === 'url' && !url) ||
+              (inputMethod === 'file' && !file)
+                ? 'none'
+                : shadows.lg,
+            transition: 'all 0.3s ease',
+            minWidth: '300px',
+            height: '70px',
+            letterSpacing: '0.5px'
           }}
+          className={
+            (inputMethod === 'url' && !url) || (inputMethod === 'file' && !file)
+              ? ''
+              : 'shimmer'
+          }
         >
           Analyze Content
-        </button>
+        </motion.button>
       </motion.div>
     </motion.div>
   );

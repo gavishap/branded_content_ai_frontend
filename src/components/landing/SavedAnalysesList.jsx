@@ -4,11 +4,19 @@ import { motion } from 'framer-motion';
 import axios from 'axios';
 import {
   colors,
+  gradients,
   spacing,
   borderRadius,
   shadows,
   typography
 } from '../../utils/theme';
+import {
+  FiTrash2,
+  FiPlay,
+  FiRefreshCw,
+  FiAlertCircle,
+  FiVideo
+} from 'react-icons/fi';
 
 // API URL configuration (use environment variable in production)
 const API_BASE_URL =
@@ -37,7 +45,11 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.3 }
+      transition: {
+        type: 'spring',
+        stiffness: 260,
+        damping: 20
+      }
     }
   };
 
@@ -125,43 +137,188 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
   };
 
   return (
-    <div style={{ marginBottom: spacing.xl }}>
-      <h2
+    <div style={{ marginBottom: spacing.xxl }}>
+      <div
         style={{
-          fontSize: typography.fontSize.xl,
-          marginBottom: spacing.md,
-          color: colors.primary.dark,
-          textAlign: 'left'
+          display: 'flex',
+          alignItems: 'center',
+          marginBottom: spacing.lg
         }}
       >
-        Recent Analyses
-      </h2>
+        <h2
+          style={{
+            fontSize: typography.fontSize.xxl,
+            margin: 0,
+            background: gradients.blueTeal,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontWeight: typography.fontWeights.bold
+          }}
+        >
+          Recent Analyses
+        </h2>
+
+        {!loading && !error && analyses.length > 0 && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={fetchAnalyses}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              background: 'none',
+              border: 'none',
+              color: colors.primary.main,
+              marginLeft: 'auto',
+              cursor: 'pointer',
+              fontSize: typography.fontSize.md,
+              gap: spacing.xs,
+              padding: spacing.xs
+            }}
+          >
+            <FiRefreshCw size={16} />
+            <span>Refresh</span>
+          </motion.button>
+        )}
+      </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: spacing.lg }}>
-          <p>Loading saved analyses...</p>
-        </div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            textAlign: 'center',
+            padding: spacing.xl,
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            borderRadius: borderRadius.xl,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            boxShadow: shadows.sm
+          }}
+          className="glass"
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: spacing.md
+            }}
+          >
+            <motion.div
+              animate={{
+                rotate: 360,
+                transition: {
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: 'linear'
+                }
+              }}
+            >
+              <FiRefreshCw size={32} color={colors.primary.main} />
+            </motion.div>
+            <p
+              style={{
+                color: colors.neutral.darkGrey,
+                margin: 0,
+                fontSize: typography.fontSize.lg
+              }}
+            >
+              Loading saved analyses...
+            </p>
+          </div>
+        </motion.div>
       ) : error ? (
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           style={{
             textAlign: 'center',
-            padding: spacing.lg,
-            color: colors.accent.red
+            padding: spacing.xl,
+            backgroundColor: `${colors.status.error}10`,
+            borderRadius: borderRadius.xl,
+            color: colors.status.error,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: spacing.md,
+            boxShadow: shadows.sm
           }}
         >
-          <p>{error}</p>
-        </div>
+          <FiAlertCircle size={32} />
+          <p
+            style={{
+              margin: 0,
+              fontSize: typography.fontSize.lg
+            }}
+          >
+            {error}
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={fetchAnalyses}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: spacing.sm,
+              background: colors.neutral.white,
+              border: `1px solid ${colors.neutral.lightGrey}`,
+              borderRadius: borderRadius.lg,
+              padding: `${spacing.sm}px ${spacing.md}px`,
+              fontSize: typography.fontSize.md,
+              color: colors.primary.dark,
+              cursor: 'pointer',
+              boxShadow: shadows.sm
+            }}
+          >
+            <FiRefreshCw size={16} />
+            <span>Try Again</span>
+          </motion.button>
+        </motion.div>
       ) : analyses.length === 0 ? (
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           style={{
             textAlign: 'center',
-            padding: spacing.lg,
-            backgroundColor: colors.neutral.lightGrey,
-            borderRadius: borderRadius.lg
+            padding: spacing.xl,
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            borderRadius: borderRadius.xl,
+            boxShadow: shadows.sm,
+            color: colors.neutral.darkGrey,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: spacing.md
           }}
+          className="glass"
         >
-          <p>No saved analyses found. Analyze a video to get started!</p>
-        </div>
+          <div
+            style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              backgroundColor: `${colors.accent.purple}15`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <FiVideo size={36} color={colors.accent.purple} />
+          </div>
+          <p
+            style={{
+              margin: 0,
+              fontSize: typography.fontSize.lg,
+              fontWeight: typography.fontWeights.medium
+            }}
+          >
+            No saved analyses found. Analyze a video to get started!
+          </p>
+        </motion.div>
       ) : (
         <>
           <motion.div
@@ -170,75 +327,74 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
             animate="visible"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-              gap: spacing.md
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: spacing.lg
             }}
           >
             {analyses.map(analysis => (
               <motion.div
                 key={analysis.id}
                 variants={itemVariants}
-                whileHover={{ scale: 1.03 }}
+                whileHover={{
+                  scale: 1.03,
+                  boxShadow: shadows.lg,
+                  y: -5
+                }}
                 onClick={() => handleAnalysisSelect(analysis)}
                 style={{
-                  backgroundColor: colors.neutral.white,
-                  padding: spacing.md,
-                  borderRadius: borderRadius.lg,
-                  boxShadow: shadows.sm,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  borderRadius: borderRadius.xl,
+                  boxShadow: shadows.md,
                   cursor: 'pointer',
                   position: 'relative',
-                  transition: 'all 0.2s ease',
-                  border: `1px solid ${colors.neutral.lightGrey}`
+                  transition: 'all 0.3s ease',
+                  overflow: 'hidden',
+                  border: `1px solid rgba(255, 255, 255, 0.5)`,
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)'
                 }}
+                className="glass"
               >
-                <div
+                <motion.div
+                  whileHover={{ opacity: 1 }}
                   style={{
                     position: 'absolute',
-                    top: spacing.xs,
-                    right: spacing.xs,
+                    top: spacing.sm,
+                    right: spacing.sm,
                     zIndex: 2
                   }}
                 >
-                  <button
+                  <motion.button
                     onClick={e => handleDelete(e, analysis.id)}
+                    whileHover={{
+                      scale: 1.1,
+                      backgroundColor: `${colors.status.error}30`
+                    }}
+                    whileTap={{ scale: 0.9 }}
                     style={{
-                      background: 'none',
+                      background: `${colors.status.error}20`,
                       border: 'none',
                       cursor: 'pointer',
-                      color: colors.neutral.darkGrey,
-                      padding: spacing.xs,
+                      color: colors.status.error,
+                      padding: spacing.sm,
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      boxShadow: shadows.sm
                     }}
                     aria-label="Delete analysis"
                   >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </button>
-                </div>
+                    <FiTrash2 size={16} />
+                  </motion.button>
+                </motion.div>
 
                 <div
                   style={{
                     width: '100%',
-                    height: '120px',
-                    backgroundColor: `${colors.primary.light}30`,
-                    borderRadius: borderRadius.md,
-                    marginBottom: spacing.sm,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    height: '160px',
+                    backgroundColor: `${colors.neutral.darkGrey}20`,
+                    position: 'relative',
                     overflow: 'hidden'
                   }}
                 >
@@ -253,97 +409,205 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
                       }}
                     />
                   ) : (
-                    <svg
-                      width="48"
-                      height="48"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        background: `linear-gradient(135deg, ${colors.primary.light}50, ${colors.accent.purple}50)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
                     >
-                      <path
-                        d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"
-                        fill={colors.primary.main}
-                      />
-                    </svg>
+                      <FiVideo size={48} color="white" />
+                    </div>
                   )}
+
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      background: 'rgba(0,0,0,0.3)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(255,255,255,0.9)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: shadows.lg
+                      }}
+                    >
+                      <FiPlay
+                        size={24}
+                        color={colors.primary.main}
+                        style={{ marginLeft: '2px' }}
+                      />
+                    </motion.div>
+                  </motion.div>
                 </div>
 
-                <h3
-                  style={{
-                    margin: 0,
-                    marginBottom: spacing.xs,
-                    fontSize: typography.fontSize.md,
-                    fontWeight: typography.fontWeights.medium,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {formatContentName(analysis.content_name)}
-                </h3>
+                <div style={{ padding: spacing.md }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      marginBottom: spacing.xs,
+                      fontSize: typography.fontSize.lg,
+                      fontWeight: typography.fontWeights.medium,
+                      color: colors.primary.dark,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {formatContentName(analysis.content_name)}
+                  </h3>
 
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: typography.fontSize.sm,
-                    color: colors.neutral.darkGrey
-                  }}
-                >
-                  {analysis.formatted_date}
-                </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: typography.fontSize.md,
+                      color: colors.neutral.darkGrey
+                    }}
+                  >
+                    {analysis.formatted_date}
+                  </p>
+                </div>
               </motion.div>
             ))}
           </motion.div>
 
           {analyses.length > 0 && (
-            <div
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
               style={{
                 display: 'flex',
                 justifyContent: 'center',
-                marginTop: spacing.lg
+                marginTop: spacing.xl
               }}
             >
-              <button
+              <motion.button
                 onClick={() => setPage(Math.max(0, page - 1))}
                 disabled={page === 0}
+                whileHover={
+                  page === 0 ? {} : { scale: 1.05, boxShadow: shadows.md }
+                }
+                whileTap={page === 0 ? {} : { scale: 0.95 }}
                 style={{
-                  padding: `${spacing.xs} ${spacing.md}`,
+                  padding: `${spacing.sm} ${spacing.lg}`,
                   backgroundColor:
-                    page === 0 ? colors.neutral.lightGrey : colors.primary.main,
+                    page === 0
+                      ? colors.neutral.lightGrey
+                      : 'rgba(255, 255, 255, 0.8)',
                   color:
-                    page === 0 ? colors.neutral.darkGrey : colors.neutral.white,
-                  border: 'none',
-                  borderRadius: borderRadius.md,
-                  marginRight: spacing.sm,
+                    page === 0 ? colors.neutral.darkGrey : colors.primary.dark,
+                  border: `1px solid ${
+                    page === 0 ? 'transparent' : colors.primary.main
+                  }`,
+                  borderRadius: borderRadius.lg,
+                  marginRight: spacing.md,
                   cursor: page === 0 ? 'default' : 'pointer',
-                  opacity: page === 0 ? 0.5 : 1
+                  opacity: page === 0 ? 0.5 : 1,
+                  fontWeight: typography.fontWeights.medium,
+                  fontSize: typography.fontSize.md,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  minWidth: '120px',
+                  justifyContent: 'center',
+                  boxShadow: page === 0 ? 'none' : shadows.sm,
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)'
                 }}
+                className={page === 0 ? '' : 'glass'}
               >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
                 Previous
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
                 onClick={() => setPage(page + 1)}
                 disabled={analyses.length < limit}
+                whileHover={
+                  analyses.length < limit
+                    ? {}
+                    : { scale: 1.05, boxShadow: shadows.md }
+                }
+                whileTap={analyses.length < limit ? {} : { scale: 0.95 }}
                 style={{
-                  padding: `${spacing.xs} ${spacing.md}`,
+                  padding: `${spacing.sm} ${spacing.lg}`,
                   backgroundColor:
                     analyses.length < limit
                       ? colors.neutral.lightGrey
-                      : colors.primary.main,
+                      : 'rgba(255, 255, 255, 0.8)',
                   color:
                     analyses.length < limit
                       ? colors.neutral.darkGrey
-                      : colors.neutral.white,
-                  border: 'none',
-                  borderRadius: borderRadius.md,
+                      : colors.primary.dark,
+                  border: `1px solid ${
+                    analyses.length < limit
+                      ? 'transparent'
+                      : colors.primary.main
+                  }`,
+                  borderRadius: borderRadius.lg,
                   cursor: analyses.length < limit ? 'default' : 'pointer',
-                  opacity: analyses.length < limit ? 0.5 : 1
+                  opacity: analyses.length < limit ? 0.5 : 1,
+                  fontWeight: typography.fontWeights.medium,
+                  fontSize: typography.fontSize.md,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: spacing.xs,
+                  minWidth: '120px',
+                  justifyContent: 'center',
+                  boxShadow: analyses.length < limit ? 'none' : shadows.sm,
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)'
                 }}
+                className={analyses.length < limit ? '' : 'glass'}
               >
                 Next
-              </button>
-            </div>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </motion.button>
+            </motion.div>
           )}
         </>
       )}
