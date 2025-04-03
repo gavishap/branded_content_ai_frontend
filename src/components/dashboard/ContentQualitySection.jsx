@@ -689,119 +689,96 @@ const ContentQualitySection = ({
             Pacing and Flow
           </h3>
 
+          <div style={{ marginBottom: spacing.lg }}>
+            <MetricCard
+              title="Pacing & Flow Score"
+              value={pacingAndFlow.score || 0}
+              icon="⏱️"
+              description={`Confidence: ${pacingAndFlow.confidence || 'Low'}`}
+            />
+          </div>
+
+          {/* Insights */}
           <div
             style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: spacing.lg
+              backgroundColor: `${colors.neutral.lightGrey}20`,
+              borderRadius: borderRadius.lg,
+              padding: spacing.md,
+              marginBottom: spacing.lg
             }}
           >
-            <div style={{ flex: '1 1 300px' }}>
-              <MetricCard
-                title="Pacing & Flow Score"
-                value={pacingAndFlow.score || 0}
-                icon="⏱️"
-                description={`Confidence: ${pacingAndFlow.confidence || 'Low'}`}
-              />
+            <h4
+              style={{
+                marginTop: 0,
+                marginBottom: spacing.sm,
+                color: colors.primary.dark
+              }}
+            >
+              Insights
+            </h4>
+            <p style={{ lineHeight: 1.6, margin: 0 }}>
+              {pacingAndFlow.insights || 'No insights available.'}
+            </p>
+          </div>
 
-              {/* Editing Pace Section - Inside Pacing and Flow */}
-              <div
+          {/* Pacing Analysis */}
+          <div
+            style={{
+              backgroundColor: `${colors.neutral.lightGrey}20`,
+              borderRadius: borderRadius.lg,
+              padding: spacing.md,
+              marginBottom: spacing.lg
+            }}
+          >
+            <h4
+              style={{
+                marginTop: 0,
+                marginBottom: spacing.sm,
+                color: colors.primary.dark
+              }}
+            >
+              Pacing Analysis
+            </h4>
+            <p style={{ lineHeight: 1.6, margin: 0, marginBottom: spacing.md }}>
+              {pacingAndFlow.editing_pace?.pacing_analysis ||
+                'No pacing analysis available.'}
+            </p>
+
+            {/* Editing Pace details */}
+            <div
+              style={{
+                backgroundColor: colors.neutral.white,
+                borderRadius: borderRadius.md,
+                padding: spacing.md,
+                boxShadow: shadows.sm
+              }}
+            >
+              <h5
                 style={{
-                  marginTop: spacing.md,
-                  backgroundColor: `${colors.neutral.lightGrey}20`,
-                  borderRadius: borderRadius.lg,
-                  padding: spacing.md
+                  margin: 0,
+                  marginBottom: spacing.sm,
+                  fontSize: typography.fontSize.md,
+                  fontWeight: typography.fontWeights.medium,
+                  color: colors.primary.dark
                 }}
               >
-                <h4
-                  style={{
-                    marginTop: 0,
-                    marginBottom: spacing.sm,
-                    color: colors.primary.dark
-                  }}
-                >
-                  Editing Pace
-                </h4>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: spacing.md
-                  }}
-                >
-                  <div
-                    style={{
-                      flex: '1 0 auto',
-                      padding: spacing.sm,
-                      backgroundColor: colors.neutral.white,
-                      borderRadius: borderRadius.md,
-                      boxShadow: shadows.sm
-                    }}
-                  >
-                    <strong>Average Cuts:</strong>{' '}
-                    {pacingAndFlow.editing_pace?.average_cuts_per_second ||
-                      'N/A'}
-                  </div>
-                  <div
-                    style={{
-                      flex: '1 0 auto',
-                      padding: spacing.sm,
-                      backgroundColor: colors.neutral.white,
-                      borderRadius: borderRadius.md,
-                      boxShadow: shadows.sm
-                    }}
-                  >
-                    <strong>Total Cuts:</strong>{' '}
-                    {pacingAndFlow.editing_pace?.total_cut_count || 0}
-                  </div>
+                Editing Pace
+              </h5>
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: spacing.md
+                }}
+              >
+                <div style={{ flex: '1 1 auto', minWidth: '150px' }}>
+                  <strong>Average Cuts:</strong>{' '}
+                  {pacingAndFlow.editing_pace?.average_cuts_per_second || 'N/A'}
                 </div>
-              </div>
-            </div>
-
-            <div style={{ flex: '1 1 500px' }}>
-              <div
-                style={{
-                  backgroundColor: `${colors.neutral.lightGrey}20`,
-                  borderRadius: borderRadius.lg,
-                  padding: spacing.md,
-                  marginBottom: spacing.md
-                }}
-              >
-                <h4
-                  style={{
-                    marginTop: 0,
-                    marginBottom: spacing.sm,
-                    color: colors.primary.dark
-                  }}
-                >
-                  Insights
-                </h4>
-                <p style={{ lineHeight: 1.6, margin: 0 }}>
-                  {pacingAndFlow.insights || 'No insights available.'}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  backgroundColor: `${colors.neutral.lightGrey}20`,
-                  borderRadius: borderRadius.lg,
-                  padding: spacing.md
-                }}
-              >
-                <h4
-                  style={{
-                    marginTop: 0,
-                    marginBottom: spacing.sm,
-                    color: colors.primary.dark
-                  }}
-                >
-                  Pacing Analysis
-                </h4>
-                <p style={{ lineHeight: 1.6, margin: 0 }}>
-                  {pacingAndFlow.editing_pace?.pacing_analysis ||
-                    'No pacing analysis available.'}
-                </p>
+                <div style={{ flex: '1 1 auto', minWidth: '150px' }}>
+                  <strong>Total Cuts:</strong>{' '}
+                  {pacingAndFlow.editing_pace?.total_cut_count || 0}
+                </div>
               </div>
             </div>
           </div>
