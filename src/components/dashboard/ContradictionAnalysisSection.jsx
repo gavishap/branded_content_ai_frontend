@@ -10,7 +10,12 @@ import {
   typography
 } from '../../utils/theme';
 
-const ContradictionAnalysisSection = ({ contradictionData }) => {
+const ContradictionAnalysisSection = ({ contradictionData = [] }) => {
+  // If no contradiction data exists, don't render this section
+  if (!contradictionData || contradictionData.length === 0) {
+    return null;
+  }
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -85,7 +90,7 @@ const ContradictionAnalysisSection = ({ contradictionData }) => {
                   flex: 1
                 }}
               >
-                {contradiction.metric}
+                {contradiction.metric || 'Unknown Metric'}
               </h3>
 
               <div
@@ -102,7 +107,8 @@ const ContradictionAnalysisSection = ({ contradictionData }) => {
                   fontWeight: typography.fontWeights.medium
                 }}
               >
-                Confidence: {contradiction.confidence_in_reconciliation}
+                Confidence:{' '}
+                {contradiction.confidence_in_reconciliation || 'Unknown'}
               </div>
             </div>
 
@@ -132,7 +138,9 @@ const ContradictionAnalysisSection = ({ contradictionData }) => {
                 >
                   Gemini Assessment
                 </h4>
-                <p style={{ margin: 0 }}>{contradiction.gemini_assessment}</p>
+                <p style={{ margin: 0 }}>
+                  {contradiction.gemini_assessment || 'No data available'}
+                </p>
               </div>
 
               <div
@@ -153,7 +161,9 @@ const ContradictionAnalysisSection = ({ contradictionData }) => {
                 >
                   ClarifAI Assessment
                 </h4>
-                <p style={{ margin: 0 }}>{contradiction.clarifai_assessment}</p>
+                <p style={{ margin: 0 }}>
+                  {contradiction.clarifai_assessment || 'No data available'}
+                </p>
               </div>
             </div>
 
@@ -180,7 +190,7 @@ const ContradictionAnalysisSection = ({ contradictionData }) => {
                   lineHeight: 1.6
                 }}
               >
-                {contradiction.reconciliation}
+                {contradiction.reconciliation || 'No reconciliation provided'}
               </p>
             </div>
           </motion.div>
@@ -191,7 +201,7 @@ const ContradictionAnalysisSection = ({ contradictionData }) => {
 };
 
 ContradictionAnalysisSection.propTypes = {
-  contradictionData: PropTypes.array.isRequired
+  contradictionData: PropTypes.array
 };
 
 export default ContradictionAnalysisSection;

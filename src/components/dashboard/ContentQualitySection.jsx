@@ -13,7 +13,52 @@ import {
   typography
 } from '../../utils/theme';
 
-const ContentQualitySection = ({ contentQuality }) => {
+const ContentQualitySection = ({ contentQuality = {} }) => {
+  // Ensure all required nested objects exist
+  const visualElements = contentQuality.visual_elements || {
+    score: 0,
+    confidence: 'Low',
+    strengths: [],
+    improvement_areas: [],
+    color_scheme: {
+      dominant_colors: [],
+      color_mood: '',
+      saturation_level: 0,
+      contrast_rating: 0
+    }
+  };
+
+  const audioElements = contentQuality.audio_elements || {
+    score: 0,
+    confidence: 'Low',
+    strengths: [],
+    improvement_areas: []
+  };
+
+  const narrativeStructure = contentQuality.narrative_structure || {
+    score: 0,
+    confidence: 'Low',
+    strengths: [],
+    improvement_areas: []
+  };
+
+  const pacingAndFlow = contentQuality.pacing_and_flow || {
+    score: 0,
+    confidence: 'Low',
+    insights: '',
+    editing_pace: {
+      average_cuts_per_second: '',
+      total_cut_count: 0,
+      pacing_analysis: ''
+    }
+  };
+
+  const productPresentation = contentQuality.product_presentation || {
+    featured_products: [],
+    overall_presentation_score: 0,
+    confidence: 'Low'
+  };
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -43,11 +88,11 @@ const ContentQualitySection = ({ contentQuality }) => {
       {
         label: 'Content Quality Scores',
         data: [
-          contentQuality.visual_elements.score,
-          contentQuality.audio_elements.score,
-          contentQuality.narrative_structure.score,
-          contentQuality.pacing_and_flow.score,
-          contentQuality.product_presentation.overall_presentation_score
+          visualElements.score,
+          audioElements.score,
+          narrativeStructure.score,
+          pacingAndFlow.score,
+          productPresentation.overall_presentation_score
         ],
         backgroundColor: `${colors.primary.main}80`,
         borderColor: colors.primary.main,
@@ -57,7 +102,11 @@ const ContentQualitySection = ({ contentQuality }) => {
   };
 
   // Component for displaying strengths and improvement areas
-  const StrengthsImprovementsList = ({ strengths, improvements, title }) => (
+  const StrengthsImprovementsList = ({
+    strengths = [],
+    improvements = [],
+    title
+  }) => (
     <motion.div
       variants={itemVariants}
       style={{
@@ -108,6 +157,11 @@ const ContentQualitySection = ({ contentQuality }) => {
                 {strength}
               </li>
             ))}
+            {strengths.length === 0 && (
+              <li style={{ marginBottom: spacing.xs }}>
+                No specific strengths identified
+              </li>
+            )}
           </ul>
         </div>
 
@@ -134,6 +188,11 @@ const ContentQualitySection = ({ contentQuality }) => {
                 {improvement}
               </li>
             ))}
+            {improvements.length === 0 && (
+              <li style={{ marginBottom: spacing.xs }}>
+                No specific improvement areas identified
+              </li>
+            )}
           </ul>
         </div>
       </div>
@@ -195,9 +254,9 @@ const ContentQualitySection = ({ contentQuality }) => {
             <div style={{ flex: '1 1 400px' }}>
               <MetricCard
                 title="Visual Elements Score"
-                value={contentQuality.visual_elements.score}
+                value={visualElements.score}
                 icon="🎬"
-                description={`Confidence: ${contentQuality.visual_elements.confidence}`}
+                description={`Confidence: ${visualElements.confidence}`}
               />
 
               <div style={{ marginTop: spacing.lg }}>
@@ -243,15 +302,15 @@ const ContentQualitySection = ({ contentQuality }) => {
                           color: colors.neutral.darkGrey
                         }}
                       >
-                        {contentQuality.visual_elements.strengths.map(
-                          (strength, index) => (
-                            <li
-                              key={index}
-                              style={{ marginBottom: spacing.xs }}
-                            >
-                              {strength}
-                            </li>
-                          )
+                        {visualElements.strengths.map((strength, index) => (
+                          <li key={index} style={{ marginBottom: spacing.xs }}>
+                            {strength}
+                          </li>
+                        ))}
+                        {visualElements.strengths.length === 0 && (
+                          <li style={{ marginBottom: spacing.xs }}>
+                            No specific strengths identified
+                          </li>
                         )}
                       </ul>
                     </div>
@@ -275,7 +334,7 @@ const ContentQualitySection = ({ contentQuality }) => {
                           color: colors.neutral.darkGrey
                         }}
                       >
-                        {contentQuality.visual_elements.improvement_areas.map(
+                        {visualElements.improvement_areas.map(
                           (improvement, index) => (
                             <li
                               key={index}
@@ -294,9 +353,7 @@ const ContentQualitySection = ({ contentQuality }) => {
 
             <div style={{ flex: '1 1 400px' }}>
               <h4 style={{ marginBottom: spacing.sm }}>Color Scheme</h4>
-              <ColorSchemeDisplay
-                colorScheme={contentQuality.visual_elements.color_scheme}
-              />
+              <ColorSchemeDisplay colorScheme={visualElements.color_scheme} />
             </div>
           </div>
         </motion.div>
@@ -333,9 +390,9 @@ const ContentQualitySection = ({ contentQuality }) => {
             <div style={{ flex: '1 1 300px' }}>
               <MetricCard
                 title="Audio Elements Score"
-                value={contentQuality.audio_elements.score}
+                value={audioElements.score}
                 icon="🔊"
-                description={`Confidence: ${contentQuality.audio_elements.confidence}`}
+                description={`Confidence: ${audioElements.confidence}`}
               />
             </div>
 
@@ -382,13 +439,11 @@ const ContentQualitySection = ({ contentQuality }) => {
                         color: colors.neutral.darkGrey
                       }}
                     >
-                      {contentQuality.audio_elements.strengths.map(
-                        (strength, index) => (
-                          <li key={index} style={{ marginBottom: spacing.xs }}>
-                            {strength}
-                          </li>
-                        )
-                      )}
+                      {audioElements.strengths.map((strength, index) => (
+                        <li key={index} style={{ marginBottom: spacing.xs }}>
+                          {strength}
+                        </li>
+                      ))}
                     </ul>
                   </div>
 
@@ -411,7 +466,7 @@ const ContentQualitySection = ({ contentQuality }) => {
                         color: colors.neutral.darkGrey
                       }}
                     >
-                      {contentQuality.audio_elements.improvement_areas.map(
+                      {audioElements.improvement_areas.map(
                         (improvement, index) => (
                           <li key={index} style={{ marginBottom: spacing.xs }}>
                             {improvement}
@@ -458,9 +513,9 @@ const ContentQualitySection = ({ contentQuality }) => {
             <div style={{ flex: '1 1 300px' }}>
               <MetricCard
                 title="Narrative Structure Score"
-                value={contentQuality.narrative_structure.score}
+                value={narrativeStructure.score}
                 icon="📝"
-                description={`Confidence: ${contentQuality.narrative_structure.confidence}`}
+                description={`Confidence: ${narrativeStructure.confidence}`}
               />
             </div>
 
@@ -507,13 +562,11 @@ const ContentQualitySection = ({ contentQuality }) => {
                         color: colors.neutral.darkGrey
                       }}
                     >
-                      {contentQuality.narrative_structure.strengths.map(
-                        (strength, index) => (
-                          <li key={index} style={{ marginBottom: spacing.xs }}>
-                            {strength}
-                          </li>
-                        )
-                      )}
+                      {narrativeStructure.strengths.map((strength, index) => (
+                        <li key={index} style={{ marginBottom: spacing.xs }}>
+                          {strength}
+                        </li>
+                      ))}
                     </ul>
                   </div>
 
@@ -536,7 +589,7 @@ const ContentQualitySection = ({ contentQuality }) => {
                         color: colors.neutral.darkGrey
                       }}
                     >
-                      {contentQuality.narrative_structure.improvement_areas.map(
+                      {narrativeStructure.improvement_areas.map(
                         (improvement, index) => (
                           <li key={index} style={{ marginBottom: spacing.xs }}>
                             {improvement}
@@ -583,9 +636,9 @@ const ContentQualitySection = ({ contentQuality }) => {
             <div style={{ flex: '1 1 300px' }}>
               <MetricCard
                 title="Pacing & Flow Score"
-                value={contentQuality.pacing_and_flow.score}
+                value={pacingAndFlow.score}
                 icon="⏱️"
-                description={`Confidence: ${contentQuality.pacing_and_flow.confidence}`}
+                description={`Confidence: ${pacingAndFlow.confidence}`}
               />
 
               {/* Editing Pace Section - Inside Pacing and Flow */}
@@ -624,10 +677,7 @@ const ContentQualitySection = ({ contentQuality }) => {
                     }}
                   >
                     <strong>Average Cuts:</strong>{' '}
-                    {
-                      contentQuality.pacing_and_flow.editing_pace
-                        .average_cuts_per_second
-                    }
+                    {pacingAndFlow.editing_pace.average_cuts_per_second}
                   </div>
                   <div
                     style={{
@@ -639,10 +689,7 @@ const ContentQualitySection = ({ contentQuality }) => {
                     }}
                   >
                     <strong>Total Cuts:</strong>{' '}
-                    {
-                      contentQuality.pacing_and_flow.editing_pace
-                        .total_cut_count
-                    }
+                    {pacingAndFlow.editing_pace.total_cut_count}
                   </div>
                 </div>
               </div>
@@ -667,7 +714,7 @@ const ContentQualitySection = ({ contentQuality }) => {
                   Insights
                 </h4>
                 <p style={{ lineHeight: 1.6, margin: 0 }}>
-                  {contentQuality.pacing_and_flow.insights}
+                  {pacingAndFlow.insights}
                 </p>
               </div>
 
@@ -688,7 +735,7 @@ const ContentQualitySection = ({ contentQuality }) => {
                   Pacing Analysis
                 </h4>
                 <p style={{ lineHeight: 1.6, margin: 0 }}>
-                  {contentQuality.pacing_and_flow.editing_pace.pacing_analysis}
+                  {pacingAndFlow.editing_pace.pacing_analysis}
                 </p>
               </div>
             </div>
@@ -727,11 +774,9 @@ const ContentQualitySection = ({ contentQuality }) => {
             <div style={{ flex: '1 1 300px' }}>
               <MetricCard
                 title="Product Presentation Score"
-                value={
-                  contentQuality.product_presentation.overall_presentation_score
-                }
+                value={productPresentation.overall_presentation_score}
                 icon="✨"
-                description={`Confidence: ${contentQuality.product_presentation.confidence}`}
+                description={`Confidence: ${productPresentation.confidence}`}
               />
             </div>
 
@@ -753,15 +798,15 @@ const ContentQualitySection = ({ contentQuality }) => {
                   Insights
                 </h4>
                 <p style={{ lineHeight: 1.6, margin: 0 }}>
-                  {contentQuality.product_presentation.insights}
+                  {productPresentation.insights}
                 </p>
               </div>
             </div>
           </div>
 
           {/* Featured Products */}
-          {contentQuality.product_presentation.featured_products &&
-          contentQuality.product_presentation.featured_products.length > 0 ? (
+          {productPresentation.featured_products &&
+          productPresentation.featured_products.length > 0 ? (
             <div
               style={{
                 marginTop: spacing.md,
@@ -786,43 +831,41 @@ const ContentQualitySection = ({ contentQuality }) => {
                   gap: spacing.md
                 }}
               >
-                {contentQuality.product_presentation.featured_products.map(
-                  (product, index) => (
+                {productPresentation.featured_products.map((product, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      backgroundColor: colors.neutral.white,
+                      borderRadius: borderRadius.md,
+                      padding: spacing.md,
+                      boxShadow: shadows.sm
+                    }}
+                  >
+                    <h5 style={{ margin: 0, marginBottom: spacing.xs }}>
+                      {product.name}
+                    </h5>
                     <div
-                      key={index}
                       style={{
-                        backgroundColor: colors.neutral.white,
-                        borderRadius: borderRadius.md,
-                        padding: spacing.md,
-                        boxShadow: shadows.sm
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: spacing.xs
                       }}
                     >
-                      <h5 style={{ margin: 0, marginBottom: spacing.xs }}>
-                        {product.name}
-                      </h5>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: spacing.xs
-                        }}
-                      >
-                        <div>
-                          <strong>Screen Time:</strong> {product.screen_time}
-                        </div>
-                        <div>
-                          <strong>Display Quality:</strong>{' '}
-                          {product.presentation_quality}
-                        </div>
-                        {product.timestamp && (
-                          <div>
-                            <strong>Timestamp:</strong> {product.timestamp}
-                          </div>
-                        )}
+                      <div>
+                        <strong>Screen Time:</strong> {product.screen_time}
                       </div>
+                      <div>
+                        <strong>Display Quality:</strong>{' '}
+                        {product.presentation_quality}
+                      </div>
+                      {product.timestamp && (
+                        <div>
+                          <strong>Timestamp:</strong> {product.timestamp}
+                        </div>
+                      )}
                     </div>
-                  )
-                )}
+                  </div>
+                ))}
               </div>
             </div>
           ) : null}
@@ -833,7 +876,7 @@ const ContentQualitySection = ({ contentQuality }) => {
 };
 
 ContentQualitySection.propTypes = {
-  contentQuality: PropTypes.object.isRequired
+  contentQuality: PropTypes.object
 };
 
 export default ContentQualitySection;

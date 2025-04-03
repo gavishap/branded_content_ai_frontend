@@ -16,6 +16,7 @@ function App() {
   const [analysisContent, setAnalysisContent] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [loadingStatus, setLoadingStatus] = useState('initializing');
   const [analysisId, setAnalysisId] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
 
@@ -33,6 +34,7 @@ function App() {
           // Update UI with progress
           setLoadingProgress(progress);
           setLoadingStep(step);
+          setLoadingStatus(status); // Store the status for display
 
           // If analysis is complete, show the dashboard
           if (status === 'completed' && result) {
@@ -46,6 +48,33 @@ function App() {
               clearInterval(interval);
               setPollingInterval(null);
             }, 1000);
+          } else if (progress === 100 && status === 'completed') {
+            // Handle case where result might be stored separately
+            try {
+              // Fetch the completed analysis result
+              const resultResponse = await axios.get(
+                `${API_BASE_URL}/api/analyses`
+              );
+
+              // Find our analysis
+              const completedAnalysis = resultResponse.data.analyses.find(
+                analysis => analysis.metadata.id === analysisId
+              );
+
+              if (completedAnalysis && completedAnalysis.analysis_data) {
+                setAnalysisData(completedAnalysis.analysis_data);
+
+                // Wait a moment to show 100% completion before switching to dashboard
+                setTimeout(() => {
+                  setAppState('dashboard');
+                  // Stop polling
+                  clearInterval(interval);
+                  setPollingInterval(null);
+                }, 1000);
+              }
+            } catch (resultError) {
+              console.error('Error fetching completed analysis:', resultError);
+            }
           } else if (status === 'error') {
             // Handle error state
             alert('Analysis failed. Please try again.');
@@ -78,12 +107,59 @@ function App() {
     };
   }, [pollingInterval]);
 
+  // Add a timeout effect to handle case where 100% is reached but no transition happens
+  useEffect(() => {
+    // If loading is at 100% for more than 5 seconds, try to force transition
+    if (appState === 'loading' && loadingProgress === 100) {
+      const transitionTimeout = setTimeout(async () => {
+        try {
+          console.log(
+            'Loading stuck at 100%, attempting to force transition...'
+          );
+
+          // Try to fetch the analyses
+          const response = await axios.get(`${API_BASE_URL}/api/analyses`);
+
+          // Find our analysis
+          if (response.data && response.data.analyses) {
+            const completedAnalysis = response.data.analyses.find(
+              analysis => analysis.metadata.id === analysisId
+            );
+
+            if (completedAnalysis && completedAnalysis.analysis_data) {
+              console.log(
+                'Found completed analysis, transitioning to dashboard'
+              );
+              setAnalysisData(completedAnalysis.analysis_data);
+              setAppState('dashboard');
+            } else {
+              // If we can't find the analysis, at least show the dashboard with a warning
+              console.warn(
+                "Couldn't find analysis data, showing empty dashboard"
+              );
+              setAnalysisData({});
+              setAppState('dashboard');
+            }
+          }
+        } catch (error) {
+          console.error('Error forcing transition:', error);
+          // As a last resort, just show the dashboard with empty data
+          setAnalysisData({});
+          setAppState('dashboard');
+        }
+      }, 5000);
+
+      return () => clearTimeout(transitionTimeout);
+    }
+  }, [appState, loadingProgress, analysisId]);
+
   // Handle starting the analysis process
   const handleStartAnalysis = async content => {
     setAnalysisContent(content);
     setAppState('loading');
     setLoadingProgress(0);
     setLoadingStep(0);
+    setLoadingStatus('initializing');
 
     try {
       let response;
@@ -161,12 +237,47 @@ function App() {
           <AnalysisLoading
             progress={loadingProgress}
             currentStep={loadingStep}
+            status={loadingStatus}
             type={analysisContent?.type || 'file'}
             contentName={
               analysisContent?.type === 'url'
                 ? analysisContent.content
                 : analysisContent?.content?.name
             }
+            onCompleteClick={() => {
+              // Force transition to dashboard if button is clicked
+              if (analysisData) {
+                setAppState('dashboard');
+              } else {
+                // Try to get data from analyses list as fallback
+                (async () => {
+                  try {
+                    const response = await axios.get(
+                      `${API_BASE_URL}/api/analyses`
+                    );
+                    const completedAnalysis = response.data.analyses.find(
+                      analysis => analysis.metadata.id === analysisId
+                    );
+
+                    if (completedAnalysis && completedAnalysis.analysis_data) {
+                      setAnalysisData(completedAnalysis.analysis_data);
+                      setAppState('dashboard');
+                    } else {
+                      // If we still can't get the data, show an empty dashboard
+                      console.warn(
+                        'No analysis data found, showing empty dashboard'
+                      );
+                      setAnalysisData({});
+                      setAppState('dashboard');
+                    }
+                  } catch (error) {
+                    console.error('Error fetching analysis data:', error);
+                    setAnalysisData({});
+                    setAppState('dashboard');
+                  }
+                })();
+              }
+            }}
           />
         )}
 

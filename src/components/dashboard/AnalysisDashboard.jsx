@@ -35,6 +35,30 @@ const AnalysisDashboard = ({ data }) => {
     return <div>No analysis data available</div>;
   }
 
+  // Ensure all required data structures exist to prevent errors
+  const safeData = {
+    metadata: data.metadata || {},
+    summary: data.summary || {
+      content_overview: 'No overview available',
+      key_strengths: [],
+      improvement_areas: [],
+      overall_performance_score: 0
+    },
+    performance_metrics: data.performance_metrics || {},
+    audience_analysis: data.audience_analysis || {},
+    content_quality: data.content_quality || {},
+    emotional_analysis: data.emotional_analysis || {},
+    competitive_advantage: data.competitive_advantage || {
+      uniqueness_factors: [],
+      differentiation_score: 0,
+      market_positioning: 'No data available',
+      confidence: 'Low'
+    },
+    optimization_recommendations: data.optimization_recommendations || {},
+    transcription_analysis: data.transcription_analysis || {},
+    contradiction_analysis: data.contradiction_analysis || []
+  };
+
   // Container animation
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -48,15 +72,22 @@ const AnalysisDashboard = ({ data }) => {
 
   // Format metadata for display
   const metadataItems = [
-    { label: 'Video ID', value: data.metadata.video_id },
+    { label: 'Video ID', value: safeData.metadata?.video_id || 'Unknown' },
     {
       label: 'Analysis Date',
-      value: new Date(data.metadata.timestamp).toLocaleDateString()
+      value: safeData.metadata?.timestamp
+        ? new Date(safeData.metadata.timestamp).toLocaleDateString()
+        : 'Unknown'
     },
-    { label: 'Confidence Index', value: `${data.metadata.confidence_index}%` },
+    {
+      label: 'Confidence Index',
+      value: `${safeData.metadata?.confidence_index || 0}%`
+    },
     {
       label: 'Analysis Sources',
-      value: data.metadata.analysis_sources.join(', ')
+      value: Array.isArray(safeData.metadata?.analysis_sources)
+        ? safeData.metadata.analysis_sources.join(', ')
+        : 'Unknown'
     }
   ];
 
@@ -106,8 +137,8 @@ const AnalysisDashboard = ({ data }) => {
             </h3>
             <ScoreGauge
               score={
-                typeof data.summary.overall_performance_score === 'number'
-                  ? data.summary.overall_performance_score
+                typeof safeData.summary.overall_performance_score === 'number'
+                  ? safeData.summary.overall_performance_score
                   : 0
               }
             />
@@ -117,22 +148,22 @@ const AnalysisDashboard = ({ data }) => {
 
       {/* Summary Section */}
       <SummarySection
-        contentOverview={data.summary.content_overview}
-        strengths={data.summary.key_strengths}
-        improvements={data.summary.improvement_areas}
+        contentOverview={safeData.summary.content_overview}
+        strengths={safeData.summary.key_strengths || []}
+        improvements={safeData.summary.improvement_areas || []}
       />
 
       {/* Performance Metrics Section */}
-      <PerformanceMetricsSection metrics={data.performance_metrics} />
+      <PerformanceMetricsSection metrics={safeData.performance_metrics} />
 
       {/* Audience Analysis Section */}
-      <AudienceAnalysisSection audienceData={data.audience_analysis} />
+      <AudienceAnalysisSection audienceData={safeData.audience_analysis} />
 
       {/* Content Quality Section */}
-      <ContentQualitySection contentQuality={data.content_quality} />
+      <ContentQualitySection contentQuality={safeData.content_quality} />
 
       {/* Emotional Analysis Section */}
-      <EmotionalAnalysisSection emotionalData={data.emotional_analysis} />
+      <EmotionalAnalysisSection emotionalData={safeData.emotional_analysis} />
 
       {/* Competitive Advantage Section */}
       <Section title="Competitive Advantage">
@@ -146,7 +177,9 @@ const AnalysisDashboard = ({ data }) => {
         >
           <div>
             <StrengthsImprovements
-              strengths={data.competitive_advantage.uniqueness_factors}
+              strengths={
+                safeData.competitive_advantage.uniqueness_factors || []
+              }
               improvements={[]}
               strengthsTitle="Uniqueness Factors"
             />
@@ -154,7 +187,7 @@ const AnalysisDashboard = ({ data }) => {
           <div>
             <MetricCard
               title="Differentiation Score"
-              value={data.competitive_advantage.differentiation_score}
+              value={safeData.competitive_advantage.differentiation_score || 0}
               icon="📊"
               description="Score representing how differentiated this content is from competitors"
             />
@@ -181,7 +214,8 @@ const AnalysisDashboard = ({ data }) => {
             Market Positioning
           </h3>
           <p style={{ lineHeight: 1.6, margin: 0, marginBottom: spacing.md }}>
-            {data.competitive_advantage.market_positioning}
+            {safeData.competitive_advantage.market_positioning ||
+              'No data available'}
           </p>
           <div
             style={{
@@ -192,22 +226,25 @@ const AnalysisDashboard = ({ data }) => {
               fontSize: typography.fontSize.sm
             }}
           >
-            <strong>Confidence:</strong> {data.competitive_advantage.confidence}
+            <strong>Confidence:</strong>{' '}
+            {safeData.competitive_advantage.confidence || 'Low'}
           </div>
         </div>
       </Section>
 
       {/* Optimization Recommendations Section */}
       <OptimizationSection
-        optimizationData={data.optimization_recommendations}
+        optimizationData={safeData.optimization_recommendations}
       />
 
       {/* Transcription Analysis */}
-      <TranscriptionSection transcriptionData={data.transcription_analysis} />
+      <TranscriptionSection
+        transcriptionData={safeData.transcription_analysis}
+      />
 
       {/* Contradiction Analysis */}
       <ContradictionAnalysisSection
-        contradictionData={data.contradiction_analysis}
+        contradictionData={safeData.contradiction_analysis || []}
       />
     </motion.div>
   );

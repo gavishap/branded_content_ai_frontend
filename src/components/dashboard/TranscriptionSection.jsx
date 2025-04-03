@@ -11,7 +11,20 @@ import {
   typography
 } from '../../utils/theme';
 
-const TranscriptionSection = ({ transcriptionData }) => {
+const TranscriptionSection = ({ transcriptionData = {} }) => {
+  // Apply default values for null/undefined data
+  const safeData = {
+    available: transcriptionData.available || false,
+    subtitle_coverage: transcriptionData.subtitle_coverage || {
+      percentage: 0,
+      missing_segments: [],
+      quality_score: 0,
+      issues: []
+    },
+    key_phrases: transcriptionData.key_phrases || [],
+    confidence: transcriptionData.confidence || 'Low'
+  };
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -29,7 +42,7 @@ const TranscriptionSection = ({ transcriptionData }) => {
   };
 
   // Check if transcription is available
-  if (!transcriptionData.available) {
+  if (!safeData.available) {
     return (
       <Section title="Transcription Analysis">
         <div
@@ -45,6 +58,24 @@ const TranscriptionSection = ({ transcriptionData }) => {
       </Section>
     );
   }
+
+  // Format missing segments to handle both string and object formats
+  const formatMissingSegment = segment => {
+    if (typeof segment === 'string') {
+      return segment;
+    }
+
+    if (
+      segment &&
+      typeof segment === 'object' &&
+      segment.start &&
+      segment.end
+    ) {
+      return `${segment.start} - ${segment.end}`;
+    }
+
+    return 'Unknown segment';
+  };
 
   return (
     <Section title="Transcription Analysis">
@@ -71,88 +102,87 @@ const TranscriptionSection = ({ transcriptionData }) => {
           >
             <MetricCard
               title="Subtitle Coverage"
-              value={`${transcriptionData.subtitle_coverage.percentage}%`}
+              value={`${safeData.subtitle_coverage.percentage}%`}
               icon="📝"
-              subtitle={`Quality Score: ${transcriptionData.subtitle_coverage.quality_score}/100`}
+              subtitle={`Quality Score: ${safeData.subtitle_coverage.quality_score}/100`}
               tooltipText="Percentage of content covered by subtitles"
             />
 
-            {transcriptionData.subtitle_coverage.missing_segments.length >
-              0 && (
-              <div
-                style={{
-                  marginTop: spacing.md,
-                  backgroundColor: colors.neutral.white,
-                  borderRadius: borderRadius.lg,
-                  padding: spacing.md,
-                  boxShadow: shadows.sm
-                }}
-              >
-                <h4
+            {safeData.subtitle_coverage.missing_segments &&
+              safeData.subtitle_coverage.missing_segments.length > 0 && (
+                <div
                   style={{
-                    margin: 0,
-                    marginBottom: spacing.sm,
-                    fontSize: typography.fontSize.md,
-                    color: colors.accent.orange
+                    marginTop: spacing.md,
+                    backgroundColor: colors.neutral.white,
+                    borderRadius: borderRadius.lg,
+                    padding: spacing.md,
+                    boxShadow: shadows.sm
                   }}
                 >
-                  Missing Segments
-                </h4>
+                  <h4
+                    style={{
+                      margin: 0,
+                      marginBottom: spacing.sm,
+                      fontSize: typography.fontSize.md,
+                      color: colors.accent.orange
+                    }}
+                  >
+                    Missing Segments
+                  </h4>
 
-                <ul
-                  style={{
-                    paddingLeft: spacing.lg,
-                    margin: 0
-                  }}
-                >
-                  {transcriptionData.subtitle_coverage.missing_segments.map(
-                    (segment, index) => (
-                      <li key={index} style={{ marginBottom: spacing.xs }}>
-                        {segment}
-                      </li>
-                    )
-                  )}
-                </ul>
-              </div>
-            )}
+                  <ul
+                    style={{
+                      paddingLeft: spacing.lg,
+                      margin: 0
+                    }}
+                  >
+                    {safeData.subtitle_coverage.missing_segments.map(
+                      (segment, index) => (
+                        <li key={index} style={{ marginBottom: spacing.xs }}>
+                          {formatMissingSegment(segment)}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                </div>
+              )}
 
-            {transcriptionData.subtitle_coverage.issues.length > 0 && (
-              <div
-                style={{
-                  marginTop: spacing.md,
-                  backgroundColor: colors.neutral.white,
-                  borderRadius: borderRadius.lg,
-                  padding: spacing.md,
-                  boxShadow: shadows.sm
-                }}
-              >
-                <h4
+            {safeData.subtitle_coverage.issues &&
+              safeData.subtitle_coverage.issues.length > 0 && (
+                <div
                   style={{
-                    margin: 0,
-                    marginBottom: spacing.sm,
-                    fontSize: typography.fontSize.md,
-                    color: colors.accent.orange
+                    marginTop: spacing.md,
+                    backgroundColor: colors.neutral.white,
+                    borderRadius: borderRadius.lg,
+                    padding: spacing.md,
+                    boxShadow: shadows.sm
                   }}
                 >
-                  Issues
-                </h4>
+                  <h4
+                    style={{
+                      margin: 0,
+                      marginBottom: spacing.sm,
+                      fontSize: typography.fontSize.md,
+                      color: colors.accent.orange
+                    }}
+                  >
+                    Issues
+                  </h4>
 
-                <ul
-                  style={{
-                    paddingLeft: spacing.lg,
-                    margin: 0
-                  }}
-                >
-                  {transcriptionData.subtitle_coverage.issues.map(
-                    (issue, index) => (
+                  <ul
+                    style={{
+                      paddingLeft: spacing.lg,
+                      margin: 0
+                    }}
+                  >
+                    {safeData.subtitle_coverage.issues.map((issue, index) => (
                       <li key={index} style={{ marginBottom: spacing.xs }}>
                         {issue}
                       </li>
-                    )
-                  )}
-                </ul>
-              </div>
-            )}
+                    ))}
+                  </ul>
+                </div>
+              )}
           </motion.div>
 
           {/* Key Phrases */}
@@ -189,7 +219,7 @@ const TranscriptionSection = ({ transcriptionData }) => {
                     fontWeight: 'normal'
                   }}
                 >
-                  Confidence: {transcriptionData.confidence}
+                  Confidence: {safeData.confidence}
                 </span>
               </h3>
 
@@ -200,21 +230,32 @@ const TranscriptionSection = ({ transcriptionData }) => {
                   gap: spacing.sm
                 }}
               >
-                {transcriptionData.key_phrases.map((phrase, index) => (
+                {safeData.key_phrases.length > 0 ? (
+                  safeData.key_phrases.map((phrase, index) => (
+                    <div
+                      key={`phrase-${index}`}
+                      style={{
+                        backgroundColor: `${colors.primary.main}15`,
+                        color: colors.primary.dark,
+                        borderRadius: borderRadius.full,
+                        padding: `${spacing.xs} ${spacing.md}`,
+                        fontSize: typography.fontSize.sm,
+                        fontWeight: typography.fontWeights.medium
+                      }}
+                    >
+                      {phrase}
+                    </div>
+                  ))
+                ) : (
                   <div
-                    key={`phrase-${index}`}
                     style={{
-                      backgroundColor: `${colors.primary.main}15`,
-                      color: colors.primary.dark,
-                      borderRadius: borderRadius.full,
-                      padding: `${spacing.xs} ${spacing.md}`,
-                      fontSize: typography.fontSize.sm,
-                      fontWeight: typography.fontWeights.medium
+                      color: colors.neutral.darkGrey,
+                      fontStyle: 'italic'
                     }}
                   >
-                    {phrase}
+                    No key phrases identified
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </motion.div>
@@ -225,7 +266,7 @@ const TranscriptionSection = ({ transcriptionData }) => {
 };
 
 TranscriptionSection.propTypes = {
-  transcriptionData: PropTypes.object.isRequired
+  transcriptionData: PropTypes.object
 };
 
 export default TranscriptionSection;
