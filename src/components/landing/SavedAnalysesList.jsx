@@ -65,13 +65,22 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
     try {
       // Add a timeout to the request to prevent endless loading
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout instead of 8
 
       const response = await axios.get(
         `${API_BASE_URL}/api/saved-analyses?limit=${limit}&skip=${
           page * limit
         }`,
-        { signal: controller.signal }
+        {
+          signal: controller.signal,
+          // Add withCredentials to handle CORS properly
+          withCredentials: false,
+          // Add explicit headers
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json'
+          }
+        }
       );
 
       // Clear the timeout since we got a response
@@ -89,9 +98,19 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
       }
     } catch (err) {
       // Check if this was an abort error (timeout)
-      if (err.name === 'AbortError') {
-        console.error('Request timed out');
-        setError('Request timed out. MongoDB may be unavailable.');
+      if (err.name === 'CanceledError' || err.name === 'AbortError') {
+        console.error('Request timed out or was canceled');
+        setError(
+          'Request timed out. The backend may be unreachable or experiencing CORS issues.'
+        );
+      } else if (err.code === 'ERR_NETWORK') {
+        console.error('Network error:', err);
+        setError('Network error. The backend server may be unreachable.');
+      } else if (err.response && err.response.status === 0) {
+        console.error('CORS error:', err);
+        setError(
+          'CORS error. The backend is not configured to accept requests from this domain.'
+        );
       } else {
         console.error('Error fetching saved analyses:', err);
         setError('Failed to load analyses. Please try again later.');
