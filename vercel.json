@@ -1,0 +1,12 @@
+{
+  "framework": "react",
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/index.html" }
+  ],
+  "env": {
+    "REACT_APP_API_BASE_URL": "https://branded-content-ai-a6ff96db0804.herokuapp.com"
+  }
+} 

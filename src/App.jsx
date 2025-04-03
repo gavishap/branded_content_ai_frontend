@@ -8,7 +8,8 @@ import axios from 'axios';
 
 // API URL configuration (use environment variable in production)
 const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+  process.env.REACT_APP_API_BASE_URL ||
+  'https://branded-content-ai-a6ff96db0804.herokuapp.com';
 
 function App() {
   const [appState, setAppState] = useState('home'); // 'home', 'loading', 'dashboard'
