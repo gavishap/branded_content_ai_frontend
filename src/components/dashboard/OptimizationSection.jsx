@@ -29,13 +29,31 @@ const OptimizationSection = ({ optimizationData }) => {
     visible: { opacity: 1, y: 0 }
   };
 
-  // Format platform specific data for tabs
-  const platformOptimizations = Object.entries(
-    optimizationData.platform_specific_optimizations
-  ).map(([platform, tips]) => ({
-    platform,
-    tips
-  }));
+  // Ensure optimizationData exists
+  if (!optimizationData) {
+    return (
+      <Section title="Optimization Recommendations">
+        <div style={{ padding: spacing.lg, textAlign: 'center' }}>
+          <p>No optimization data available.</p>
+        </div>
+      </Section>
+    );
+  }
+
+  // Format platform specific data for tabs with null check
+  const platformOptimizations = optimizationData.platform_specific_optimizations
+    ? Object.entries(optimizationData.platform_specific_optimizations).map(
+        ([platform, tips]) => ({
+          platform,
+          tips: Array.isArray(tips) ? tips : []
+        })
+      )
+    : [];
+
+  // Ensure other arrays exist or provide defaults
+  const priorityImprovements = optimizationData.priority_improvements || [];
+  const abTestingSuggestions = optimizationData.a_b_testing_suggestions || [];
+  const thumbnailOptimization = optimizationData.thumbnail_optimization || [];
 
   return (
     <Section title="Optimization Recommendations">
@@ -60,9 +78,21 @@ const OptimizationSection = ({ optimizationData }) => {
             Priority Improvements
           </h3>
 
-          <RecommendationsPanel
-            recommendations={optimizationData.priority_improvements}
-          />
+          {priorityImprovements.length > 0 ? (
+            <RecommendationsPanel recommendations={priorityImprovements} />
+          ) : (
+            <div
+              style={{
+                backgroundColor: colors.neutral.white,
+                borderRadius: borderRadius.lg,
+                padding: spacing.lg,
+                textAlign: 'center',
+                boxShadow: shadows.sm
+              }}
+            >
+              <p>No priority improvements available.</p>
+            </div>
+          )}
         </motion.div>
 
         {/* A/B Testing Suggestions */}
@@ -81,74 +111,88 @@ const OptimizationSection = ({ optimizationData }) => {
             A/B Testing Suggestions
           </h3>
 
-          {optimizationData.a_b_testing_suggestions.map((suggestion, index) => (
-            <motion.div
-              key={`ab-test-${index}`}
-              variants={itemVariants}
+          {abTestingSuggestions.length > 0 ? (
+            abTestingSuggestions.map((suggestion, index) => (
+              <motion.div
+                key={`ab-test-${index}`}
+                variants={itemVariants}
+                style={{
+                  backgroundColor: colors.neutral.white,
+                  borderRadius: borderRadius.lg,
+                  padding: spacing.lg,
+                  marginBottom: spacing.md,
+                  boxShadow: shadows.md
+                }}
+              >
+                <h4
+                  style={{
+                    margin: 0,
+                    marginBottom: spacing.sm,
+                    fontSize: typography.fontSize.md,
+                    color: colors.primary.dark
+                  }}
+                >
+                  {suggestion.element || 'Test Element'}
+                </h4>
+
+                <div
+                  style={{
+                    backgroundColor: `${colors.primary.main}10`,
+                    borderRadius: borderRadius.md,
+                    padding: spacing.sm,
+                    marginBottom: spacing.md
+                  }}
+                >
+                  <strong>Expected Insights:</strong>{' '}
+                  {suggestion.expected_insights || 'No insights provided'}
+                </div>
+
+                <h5
+                  style={{
+                    marginBottom: spacing.sm,
+                    fontSize: typography.fontSize.sm,
+                    color: colors.neutral.darkGrey
+                  }}
+                >
+                  Suggested Variations:
+                </h5>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: spacing.sm
+                  }}
+                >
+                  {(suggestion.variations || []).map((variation, vIndex) => (
+                    <div
+                      key={`variation-${vIndex}`}
+                      style={{
+                        backgroundColor: colors.neutral.lightGrey,
+                        borderRadius: borderRadius.md,
+                        padding: `${spacing.xs} ${spacing.sm}`,
+                        fontSize: typography.fontSize.sm
+                      }}
+                    >
+                      {variation}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            ))
+          ) : (
+            <div
               style={{
                 backgroundColor: colors.neutral.white,
                 borderRadius: borderRadius.lg,
                 padding: spacing.lg,
-                marginBottom: spacing.md,
-                boxShadow: shadows.md
+                textAlign: 'center',
+                boxShadow: shadows.sm
               }}
             >
-              <h4
-                style={{
-                  margin: 0,
-                  marginBottom: spacing.sm,
-                  fontSize: typography.fontSize.md,
-                  color: colors.primary.dark
-                }}
-              >
-                {suggestion.element}
-              </h4>
-
-              <div
-                style={{
-                  backgroundColor: `${colors.primary.main}10`,
-                  borderRadius: borderRadius.md,
-                  padding: spacing.sm,
-                  marginBottom: spacing.md
-                }}
-              >
-                <strong>Expected Insights:</strong>{' '}
-                {suggestion.expected_insights}
-              </div>
-
-              <h5
-                style={{
-                  marginBottom: spacing.sm,
-                  fontSize: typography.fontSize.sm,
-                  color: colors.neutral.darkGrey
-                }}
-              >
-                Suggested Variations:
-              </h5>
-
-              <div
-                style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: spacing.sm
-                }}
-              >
-                {suggestion.variations.map((variation, vIndex) => (
-                  <div
-                    key={`variation-${vIndex}`}
-                    style={{
-                      backgroundColor: colors.neutral.lightGrey,
-                      borderRadius: borderRadius.md,
-                      padding: `${spacing.xs} ${spacing.sm}`,
-                      fontSize: typography.fontSize.sm
-                    }}
-                  >
-                    {variation}
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          ))}
+              <p>No A/B testing suggestions available.</p>
+            </div>
+          )}
         </motion.div>
 
         {/* Platform Specific Optimizations */}
@@ -167,9 +211,23 @@ const OptimizationSection = ({ optimizationData }) => {
             Platform Specific Optimizations
           </h3>
 
-          <PlatformOptimizationTabs
-            platformOptimizations={platformOptimizations}
-          />
+          {platformOptimizations.length > 0 ? (
+            <PlatformOptimizationTabs
+              platformOptimizations={platformOptimizations}
+            />
+          ) : (
+            <div
+              style={{
+                backgroundColor: colors.neutral.white,
+                borderRadius: borderRadius.lg,
+                padding: spacing.lg,
+                textAlign: 'center',
+                boxShadow: shadows.sm
+              }}
+            >
+              <p>No platform-specific optimizations available.</p>
+            </div>
+          )}
         </motion.div>
 
         {/* Thumbnail Optimization */}
@@ -212,8 +270,8 @@ const OptimizationSection = ({ optimizationData }) => {
                 gap: spacing.md
               }}
             >
-              {optimizationData.thumbnail_optimization.map(
-                (suggestion, index) => (
+              {thumbnailOptimization.length > 0 ? (
+                thumbnailOptimization.map((suggestion, index) => (
                   <div
                     key={`thumbnail-${index}`}
                     style={{
@@ -249,7 +307,11 @@ const OptimizationSection = ({ optimizationData }) => {
                       {suggestion}
                     </div>
                   </div>
-                )
+                ))
+              ) : (
+                <div style={{ textAlign: 'center' }}>
+                  <p>No thumbnail optimization suggestions available.</p>
+                </div>
               )}
             </div>
           </motion.div>
@@ -260,7 +322,12 @@ const OptimizationSection = ({ optimizationData }) => {
 };
 
 OptimizationSection.propTypes = {
-  optimizationData: PropTypes.object.isRequired
+  optimizationData: PropTypes.shape({
+    priority_improvements: PropTypes.array,
+    a_b_testing_suggestions: PropTypes.array,
+    platform_specific_optimizations: PropTypes.object,
+    thumbnail_optimization: PropTypes.array
+  })
 };
 
 export default OptimizationSection;

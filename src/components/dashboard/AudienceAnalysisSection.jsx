@@ -109,14 +109,47 @@ const AudienceAnalysisSection = ({ audienceData }) => {
     ]
   };
 
+  // Ensure platforms are correctly ordered and capitalized for better presentation
+  const formatPlatformFitData = () => {
+    const platformMap = {
+      facebook: { label: 'Facebook', color: '#3b5998' },
+      instagram: { label: 'Instagram', color: '#C13584' },
+      tiktok: { label: 'TikTok', color: '#69C9D0' },
+      youtube: { label: 'YouTube', color: '#FF0000' }
+    };
+
+    const platforms = Object.keys(audienceData.primary_audience.platform_fit);
+    const formattedLabels = [];
+    const formattedColors = [];
+
+    platforms.forEach(platform => {
+      const lowercasePlatform = platform.toLowerCase();
+      if (platformMap[lowercasePlatform]) {
+        formattedLabels.push(platformMap[lowercasePlatform].label);
+        formattedColors.push(platformMap[lowercasePlatform].color);
+      } else {
+        formattedLabels.push(platform);
+        formattedColors.push(colors.accent.blue);
+      }
+    });
+
+    return {
+      labels: formattedLabels,
+      colors: formattedColors,
+      data: Object.values(audienceData.primary_audience.platform_fit)
+    };
+  };
+
+  const platformFitFormatted = formatPlatformFitData();
+
   const platformFitData = {
-    labels: Object.keys(audienceData.primary_audience.platform_fit),
+    labels: platformFitFormatted.labels,
     datasets: [
       {
         label: 'Platform Fit Score',
-        data: Object.values(audienceData.primary_audience.platform_fit),
-        backgroundColor: `${colors.accent.blue}80`,
-        borderColor: colors.accent.blue,
+        data: platformFitFormatted.data,
+        backgroundColor: platformFitFormatted.colors,
+        borderColor: platformFitFormatted.colors.map(color => color),
         borderWidth: 2
       }
     ]

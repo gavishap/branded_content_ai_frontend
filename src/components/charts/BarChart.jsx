@@ -48,8 +48,9 @@ const BarChart = ({
         },
         ticks: {
           font: {
-            size: 11,
-            family: typography.fontFamily
+            size: 12,
+            family: typography.fontFamily,
+            weight: 'bold'
           },
           color: colors.neutral.darkGrey
         }
@@ -67,7 +68,8 @@ const BarChart = ({
           color: colors.neutral.darkGrey,
           padding: 10
         },
-        beginAtZero: true
+        beginAtZero: true,
+        max: 100 // Set max to 100 for percentage scales
       }
     },
     plugins: {
@@ -92,6 +94,11 @@ const BarChart = ({
           size: 12,
           family: typography.fontFamily
         },
+        callbacks: {
+          label: function (context) {
+            return `${context.dataset.label}: ${context.raw}%`;
+          }
+        },
         padding: 10,
         cornerRadius: 4
       }
@@ -101,7 +108,10 @@ const BarChart = ({
           duration: 1200,
           easing: 'easeOutQuart'
         }
-      : false
+      : false,
+    barPercentage: 0.8,
+    categoryPercentage: 0.7,
+    borderRadius: 6
   };
 
   // Animation variants for container

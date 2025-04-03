@@ -33,6 +33,42 @@ const MetadataPanel = ({ metadata, animate = true }) => {
     visible: { opacity: 1, scale: 1 }
   };
 
+  // Helper function to render the value, making URLs clickable
+  const renderValue = item => {
+    if (item.isUrl) {
+      return (
+        <a
+          href={item.value}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: colors.primary.main,
+            textDecoration: 'none',
+            wordBreak: 'break-word',
+            display: 'inline-block',
+            maxWidth: '100%'
+          }}
+        >
+          {item.value}
+          <span style={{ marginLeft: spacing.xs }}>↗</span>
+        </a>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          fontSize: typography.fontSize.md,
+          fontWeight: typography.fontWeights.semiBold,
+          color: colors.neutral.black,
+          wordBreak: 'break-word'
+        }}
+      >
+        {item.value}
+      </div>
+    );
+  };
+
   return (
     <motion.div
       initial={animate ? 'hidden' : 'visible'}
@@ -86,16 +122,7 @@ const MetadataPanel = ({ metadata, animate = true }) => {
             >
               {item.label}
             </div>
-            <div
-              style={{
-                fontSize: typography.fontSize.md,
-                fontWeight: typography.fontWeights.semiBold,
-                color: colors.neutral.black,
-                wordBreak: 'break-word'
-              }}
-            >
-              {item.value}
-            </div>
+            {renderValue(item)}
           </motion.div>
         ))}
       </div>
@@ -107,7 +134,8 @@ MetadataPanel.propTypes = {
   metadata: PropTypes.arrayOf(
     PropTypes.shape({
       label: PropTypes.string.isRequired,
-      value: PropTypes.string.isRequired
+      value: PropTypes.string.isRequired,
+      isUrl: PropTypes.bool
     })
   ),
   animate: PropTypes.bool

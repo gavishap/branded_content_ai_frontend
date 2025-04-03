@@ -156,6 +156,15 @@ function App() {
   // Handle starting the analysis process
   const handleStartAnalysis = async content => {
     setAnalysisContent(content);
+
+    // If it's a saved analysis, load it directly
+    if (content.type === 'saved' && content.savedAnalysisData) {
+      setAnalysisData(content.savedAnalysisData);
+      setAppState('dashboard');
+      return;
+    }
+
+    // For URLs and files, proceed with regular analysis
     setAppState('loading');
     setLoadingProgress(0);
     setLoadingStep(0);

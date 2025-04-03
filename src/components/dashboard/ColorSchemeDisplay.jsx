@@ -10,9 +10,73 @@ import {
 } from '../../utils/theme';
 
 const ColorSchemeDisplay = ({ colorScheme, animate = true }) => {
-  if (!colorScheme || !colorScheme.dominant_colors) {
+  if (!colorScheme) {
     return null;
   }
+
+  // Handle different possible data structures for dominant_colors
+  let dominantColors = [];
+  if (Array.isArray(colorScheme.dominant_colors)) {
+    // Handle array of objects with hex and percentage properties
+    if (
+      colorScheme.dominant_colors.length > 0 &&
+      typeof colorScheme.dominant_colors[0] === 'object'
+    ) {
+      dominantColors = colorScheme.dominant_colors;
+    }
+    // Handle array of hex strings (convert to objects with percentage)
+    else if (
+      colorScheme.dominant_colors.length > 0 &&
+      typeof colorScheme.dominant_colors[0] === 'string'
+    ) {
+      dominantColors = colorScheme.dominant_colors.map((hex, index) => ({
+        hex,
+        percentage: Math.round(100 / colorScheme.dominant_colors.length)
+      }));
+    }
+  }
+  // Handle the case where dominant_colors is an object with numeric keys
+  else if (
+    colorScheme.dominant_colors &&
+    typeof colorScheme.dominant_colors === 'object'
+  ) {
+    dominantColors = Object.entries(colorScheme.dominant_colors)
+      .filter(([key, value]) => !isNaN(parseInt(key)))
+      .map(([key, hex]) => ({
+        hex,
+        percentage: Math.round(
+          100 / Object.keys(colorScheme.dominant_colors).length
+        )
+      }));
+  }
+
+  // If we still have no colors, return null
+  if (dominantColors.length === 0) {
+    return null;
+  }
+
+  // Get color mood text - handle different data structures
+  const colorMood =
+    typeof colorScheme.color_mood === 'string'
+      ? colorScheme.color_mood
+      : typeof colorScheme.mood === 'string'
+      ? colorScheme.mood
+      : 'N/A';
+
+  // Handle numeric or string values for these properties
+  const saturationLevel =
+    colorScheme.saturation_level !== undefined
+      ? colorScheme.saturation_level
+      : colorScheme.saturation !== undefined
+      ? colorScheme.saturation
+      : 'N/A';
+
+  const contrastRating =
+    colorScheme.contrast_rating !== undefined
+      ? colorScheme.contrast_rating
+      : colorScheme.contrast !== undefined
+      ? colorScheme.contrast
+      : 'N/A';
 
   // Animation variants
   const containerVariants = {
@@ -52,7 +116,7 @@ const ColorSchemeDisplay = ({ colorScheme, animate = true }) => {
           Dominant Colors
         </h3>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing.md }}>
-          {colorScheme.dominant_colors.map((color, index) => (
+          {dominantColors.map((color, index) => (
             <motion.div
               key={`color-${index}`}
               variants={itemVariants}
@@ -100,21 +164,21 @@ const ColorSchemeDisplay = ({ colorScheme, animate = true }) => {
       >
         <ColorInfoCard
           title="Color Mood"
-          value={colorScheme.mood || 'N/A'}
+          value={colorMood}
           icon="🎨"
           variants={itemVariants}
         />
 
         <ColorInfoCard
           title="Saturation Level"
-          value={colorScheme.saturation_level || 'N/A'}
+          value={saturationLevel.toString()}
           icon="🌈"
           variants={itemVariants}
         />
 
         <ColorInfoCard
           title="Contrast Rating"
-          value={colorScheme.contrast_rating || 'N/A'}
+          value={contrastRating.toString()}
           icon="⚖️"
           variants={itemVariants}
         />
@@ -188,15 +252,24 @@ ColorInfoCard.propTypes = {
 
 ColorSchemeDisplay.propTypes = {
   colorScheme: PropTypes.shape({
-    dominant_colors: PropTypes.arrayOf(
-      PropTypes.shape({
-        hex: PropTypes.string.isRequired,
-        percentage: PropTypes.number.isRequired
-      })
-    ).isRequired,
+    dominant_colors: PropTypes.oneOfType([
+      PropTypes.arrayOf(
+        PropTypes.oneOfType([
+          PropTypes.string,
+          PropTypes.shape({
+            hex: PropTypes.string.isRequired,
+            percentage: PropTypes.number
+          })
+        ])
+      ),
+      PropTypes.object
+    ]),
+    color_mood: PropTypes.string,
     mood: PropTypes.string,
-    saturation_level: PropTypes.string,
-    contrast_rating: PropTypes.string
+    saturation_level: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    saturation: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    contrast_rating: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    contrast: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
   }),
   animate: PropTypes.bool
 };

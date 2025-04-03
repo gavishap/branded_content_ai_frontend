@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import SavedAnalysesList from './SavedAnalysesList';
 import {
   colors,
   spacing,
@@ -66,6 +67,14 @@ const HomePage = ({ onStartAnalysis }) => {
     }
   };
 
+  const handleSavedAnalysisSelect = analysis => {
+    onStartAnalysis({
+      type: 'saved',
+      content: analysis.id,
+      savedAnalysisData: analysis.analysis_data
+    });
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -125,6 +134,10 @@ const HomePage = ({ onStartAnalysis }) => {
           Get AI-powered insights on your branded videos to optimize engagement
           and performance
         </p>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <SavedAnalysesList onAnalysisSelect={handleSavedAnalysisSelect} />
       </motion.div>
 
       <motion.div
