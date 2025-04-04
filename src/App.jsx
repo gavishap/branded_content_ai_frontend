@@ -6,10 +6,15 @@ import AnalysisLoading from './components/loading/AnalysisLoading';
 import { colors } from './utils/theme';
 import axios from 'axios';
 
-// API URL configuration (use environment variable in production)
+// API URL configuration
 const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL ||
-  'https://branded-content-ai-a6ff96db0804.herokuapp.com';
+  process.env.NODE_ENV === 'production'
+    ? 'https://branded-content-ai-a6ff96db0804.herokuapp.com'
+    : 'http://localhost:5000';
+
+console.log(
+  `Using API base URL: ${API_BASE_URL} (${process.env.NODE_ENV} environment)`
+);
 
 function App() {
   const [appState, setAppState] = useState('home'); // 'home', 'loading', 'dashboard'

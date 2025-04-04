@@ -63,9 +63,11 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
     setError(null); // Clear any previous errors
 
     try {
+      console.log(`Fetching analyses from ${API_BASE_URL}/api/saved-analyses`);
+
       // Add a timeout to the request to prevent endless loading
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout instead of 8
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
       const response = await axios.get(
         `${API_BASE_URL}/api/saved-analyses?limit=${limit}&skip=${
@@ -79,19 +81,24 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json'
-          },
-          // Explicitly set mode to 'cors'
-          mode: 'cors'
+          }
         }
       );
 
       // Clear the timeout since we got a response
       clearTimeout(timeoutId);
 
+      console.log('Response received:', response.data);
+
       // Check if we have analyses array in the response (even if empty)
       if (response.data && response.data.hasOwnProperty('analyses')) {
         setAnalyses(response.data.analyses || []);
         setLoading(false);
+
+        // Log if we got an empty array but a success response
+        if (response.data.analyses && response.data.analyses.length === 0) {
+          console.log('Received successful response but empty analyses array');
+        }
       } else {
         // Handle malformed response
         console.error('Malformed API response:', response.data);
@@ -99,12 +106,12 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
         setLoading(false);
       }
     } catch (err) {
+      console.error('Error details:', err);
+
       // Check if this was an abort error (timeout)
       if (err.name === 'CanceledError' || err.name === 'AbortError') {
         console.error('Request timed out or was canceled');
-        setError(
-          'Request timed out. The backend may be unreachable or experiencing CORS issues.'
-        );
+        setError('Request timed out. The backend may be unreachable.');
       } else if (err.code === 'ERR_NETWORK') {
         console.error('Network error:', err);
         setError('Network error. The backend server may be unreachable.');
@@ -113,6 +120,13 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
         setError(
           'CORS error. The backend is not configured to accept requests from this domain.'
         );
+      } else if (err.response) {
+        // We got a response with an error status
+        console.error(
+          `Server responded with ${err.response.status}:`,
+          err.response.data
+        );
+        setError(`Server error: ${err.response.data.error || 'Unknown error'}`);
       } else {
         console.error('Error fetching saved analyses:', err);
         setError('Failed to load analyses. Please try again later.');
