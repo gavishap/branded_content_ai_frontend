@@ -16,6 +16,9 @@ console.log(
   `[Config] Using API base URL: ${API_BASE_URL} (${process.env.NODE_ENV} environment)`
 );
 
-export default {
+// Create config object
+const config = {
   API_BASE_URL
 };
+
+export default config;

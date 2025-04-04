@@ -8,15 +8,47 @@ import {
   shadows,
   typography
 } from '../../utils/theme';
+import { API_BASE_URL } from '../../config';
+
+// Animation variants for staggered animations
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.3
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 24
+    }
+  }
+};
 
 const AnalysisLoading = ({
-  progress,
-  currentStep,
+  progress: initialProgress,
+  currentStep: initialStep,
   type,
   contentName,
-  status,
-  onCompleteClick
+  status: initialStatus,
+  onCompleteClick,
+  analysisId,
+  onAnalysisComplete
 }) => {
+  const [progress, setProgress] = useState(initialProgress || 0);
+  const [currentStep, setCurrentStep] = useState(initialStep || 0);
+  const [status, setStatus] = useState(initialStatus || 'initializing');
+  const [statusMessage, setStatusMessage] = useState('');
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
   const [containerBounds, setContainerBounds] = useState({
@@ -25,6 +57,10 @@ const AnalysisLoading = ({
     width: 0,
     height: 0
   });
+  const [error, setError] = useState(null);
+  const [analysisMetadata, setAnalysisMetadata] = useState({});
+  const [pollingInterval, setPollingInterval] = useState(null);
+  const [errorCount, setErrorCount] = useState(0);
 
   // Updated steps array with more detail
   const steps = [
@@ -42,28 +78,51 @@ const AnalysisLoading = ({
     'Analysis complete!'
   ];
 
-  // Added function to map status to user-friendly message
-  const getStatusMessage = () => {
-    if (!status) return steps[currentStep];
+  // Function to convert status to user-friendly message
+  const getStatusMessage = statusCode => {
+    // If no statusCode is provided, use component's status state
+    const currentStatus = statusCode || status;
+
+    // If no status is available, return the current step message
+    if (
+      !currentStatus &&
+      currentStep !== undefined &&
+      steps &&
+      steps.length > 0
+    ) {
+      return steps[currentStep];
+    }
 
     const statusMessages = {
       initializing: 'Initializing analysis...',
       downloading_video: 'Downloading video content...',
-      running_gemini_analysis: 'Running Gemini AI analysis...',
-      running_clarifai_analysis: 'Running ClarifAI visual analysis...',
       download_complete: 'Download complete, preparing for analysis...',
       uploading_to_s3: 'Uploading to processing servers...',
+      running_gemini_analysis: 'Running Gemini AI analysis...',
+      running_clarifai_analysis: 'Running ClarifAI visual analysis...',
       processing_with_ai_models: 'Processing with multiple AI models...',
+      gemini_started: 'Starting Gemini language-based analysis...',
+      clarifai_started: 'Starting ClarifAI visual analysis...',
+      gemini_complete: 'Gemini language analysis complete!',
       gemini_analysis_complete: 'Gemini analysis complete...',
+      clarifai_complete: 'ClarifAI visual analysis complete!',
       clarifai_analysis_complete: 'ClarifAI visual analysis complete...',
       generating_unified_analysis: 'Generating comprehensive insights...',
+      validating_unified: 'Validating and refining results...',
       validating_analysis: 'Validating and refining results...',
       finalizing_results: 'Finalizing results and visualizations...',
       completed: 'Analysis complete!',
-      error: 'An error occurred. Please try again.'
+      error: 'An error occurred during analysis.',
+      captcha_error: 'YouTube CAPTCHA verification required.'
     };
 
-    return statusMessages[status] || steps[currentStep];
+    // Return the message if found, or a generic message with the raw status
+    return (
+      statusMessages[currentStatus] ||
+      (steps && currentStep !== undefined
+        ? steps[currentStep]
+        : `Processing: ${currentStatus}`)
+    );
   };
 
   // Calculate particle positions based on mouse movement
@@ -294,26 +353,6 @@ const AnalysisLoading = ({
     );
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        when: 'beforeChildren',
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: 'spring', damping: 12 }
-    }
-  };
-
   // Render different analysis modules being processed
   const renderAnalysisModules = () => {
     const modules = [
@@ -445,6 +484,140 @@ const AnalysisLoading = ({
     );
   };
 
+  // Clean up polling interval when component unmounts
+  const stopPolling = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+      setPollingInterval(null);
+    }
+  };
+
+  // Set up polling to check analysis progress
+  useEffect(() => {
+    if (analysisId) {
+      console.log(
+        'Starting polling for analysis progress with ID:',
+        analysisId
+      );
+      // Initial fetch
+      fetchAnalysisProgress();
+
+      // Set up polling interval (every 2 seconds)
+      const interval = setInterval(fetchAnalysisProgress, 2000);
+      setPollingInterval(interval);
+
+      // Clean up on unmount
+      return () => {
+        console.log('Cleaning up polling interval');
+        stopPolling();
+      };
+    } else {
+      console.log("No analysisId provided, polling won't start");
+    }
+  }, [analysisId]); // Only re-run if analysisId changes
+
+  // Function to fetch analysis progress from the API
+  const fetchAnalysisProgress = async () => {
+    if (!analysisId) {
+      console.error('No analysis ID provided for progress check');
+      setError('No analysis ID found. Please try again.');
+      return;
+    }
+
+    try {
+      console.log(`Fetching progress for analysis ${analysisId}`);
+      const response = await fetch(
+        `${API_BASE_URL}/api/analysis-progress/${analysisId}`
+      );
+
+      if (!response.ok) {
+        setErrorCount(prev => prev + 1);
+        console.error(
+          `Error fetching analysis progress: ${response.status} ${response.statusText}`
+        );
+
+        if (response.status === 404) {
+          console.log(
+            'Analysis not found, might still be initializing or was lost'
+          );
+          // If we've tried several times and still getting 404, show a message
+          if (errorCount > 5) {
+            setError(
+              'Analysis not found. It may have been lost or failed to start.'
+            );
+          }
+          return;
+        }
+
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Progress data:', data);
+
+      // Reset error count on successful response
+      setErrorCount(0);
+
+      if (data.metadata) {
+        setAnalysisMetadata(data.metadata);
+      }
+
+      if (data.status === 'error') {
+        // Check if it's a YouTube CAPTCHA error
+        if (
+          data.message &&
+          (data.message.includes('CAPTCHA') || data.message.includes('YouTube'))
+        ) {
+          console.error('YouTube CAPTCHA error detected:', data.message);
+          setError(
+            `YouTube requires CAPTCHA verification for this video. Please try uploading the video file directly instead of using a YouTube URL.`
+          );
+        } else {
+          console.error('Analysis error:', data.message);
+          setError(
+            data.message ||
+              'An error occurred during analysis. Please try again.'
+          );
+        }
+
+        // Update UI states
+        setProgress(0);
+        setCurrentStep(0);
+        setStatus('error');
+        return;
+      }
+
+      // Update UI states based on progress
+      if (data.progress !== undefined) {
+        setProgress(data.progress);
+      }
+
+      if (data.step !== undefined) {
+        setCurrentStep(data.step);
+      }
+
+      if (data.status) {
+        setStatus(data.status);
+        setStatusMessage(data.message || getStatusMessage(data.status));
+      }
+
+      // If analysis is complete, notify parent component
+      if (data.status === 'completed' && onAnalysisComplete) {
+        console.log('Analysis complete, calling onAnalysisComplete');
+        stopPolling();
+        onAnalysisComplete(data.result_id || analysisId, data.metadata);
+      }
+    } catch (error) {
+      console.error('Error fetching analysis progress:', error);
+      setErrorCount(prev => prev + 1);
+
+      // Only set error after several failed attempts to avoid flickering
+      if (errorCount > 3) {
+        setError(`Failed to check analysis progress. ${error.message}`);
+      }
+    }
+  };
+
   return (
     <motion.div
       ref={containerRef}
@@ -505,6 +678,51 @@ const AnalysisLoading = ({
           }}
         />
       ))}
+
+      {/* Error message display */}
+      {error && (
+        <div
+          style={{
+            backgroundColor: '#FEE2E2',
+            color: '#B91C1C',
+            padding: spacing.md,
+            borderRadius: borderRadius.md,
+            marginBottom: spacing.lg,
+            textAlign: 'center',
+            maxWidth: '90%',
+            margin: '0 auto',
+            marginBottom: spacing.lg,
+            boxShadow: shadows.small
+          }}
+        >
+          <p style={{ fontWeight: 'bold', marginBottom: spacing.sm }}>
+            {error.includes('CAPTCHA') || error.includes('YouTube')
+              ? 'YouTube CAPTCHA Required'
+              : 'Analysis Error'}
+          </p>
+          <p>{error}</p>
+          {(error.includes('CAPTCHA') || error.includes('YouTube')) && (
+            <p style={{ marginTop: spacing.sm, color: '#4F46E5' }}>
+              Please try uploading the video file directly instead of using a
+              YouTube URL.
+            </p>
+          )}
+          <button
+            onClick={() => (window.location.href = '/')}
+            style={{
+              marginTop: spacing.md,
+              backgroundColor: colors.primary.main,
+              color: 'white',
+              border: 'none',
+              padding: `${spacing.sm} ${spacing.md}`,
+              borderRadius: borderRadius.md,
+              cursor: 'pointer'
+            }}
+          >
+            Return to Home
+          </button>
+        </div>
+      )}
 
       {/* Main content container with glass effect */}
       <motion.div
