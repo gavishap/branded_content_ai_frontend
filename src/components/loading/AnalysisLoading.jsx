@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   colors,
@@ -492,32 +492,8 @@ const AnalysisLoading = ({
     }
   };
 
-  // Set up polling to check analysis progress
-  useEffect(() => {
-    if (analysisId) {
-      console.log(
-        'Starting polling for analysis progress with ID:',
-        analysisId
-      );
-      // Initial fetch
-      fetchAnalysisProgress();
-
-      // Set up polling interval (every 2 seconds)
-      const interval = setInterval(fetchAnalysisProgress, 2000);
-      setPollingInterval(interval);
-
-      // Clean up on unmount
-      return () => {
-        console.log('Cleaning up polling interval');
-        stopPolling();
-      };
-    } else {
-      console.log("No analysisId provided, polling won't start");
-    }
-  }, [analysisId]); // Only re-run if analysisId changes
-
   // Function to fetch analysis progress from the API
-  const fetchAnalysisProgress = async () => {
+  const fetchAnalysisProgress = useCallback(async () => {
     if (!analysisId) {
       console.error('No analysis ID provided for progress check');
       setError('No analysis ID found. Please try again.');
@@ -616,7 +592,31 @@ const AnalysisLoading = ({
         setError(`Failed to check analysis progress. ${error.message}`);
       }
     }
-  };
+  }, [analysisId, errorCount, onAnalysisComplete, stopPolling]);
+
+  // Set up polling to check analysis progress
+  useEffect(() => {
+    if (analysisId) {
+      console.log(
+        'Starting polling for analysis progress with ID:',
+        analysisId
+      );
+      // Initial fetch
+      fetchAnalysisProgress();
+
+      // Set up polling interval (every 2 seconds)
+      const interval = setInterval(fetchAnalysisProgress, 2000);
+      setPollingInterval(interval);
+
+      // Clean up on unmount
+      return () => {
+        console.log('Cleaning up polling interval');
+        stopPolling();
+      };
+    } else {
+      console.log("No analysisId provided, polling won't start");
+    }
+  }, [analysisId, fetchAnalysisProgress]);
 
   return (
     <motion.div
