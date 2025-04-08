@@ -5,15 +5,10 @@ import HomePage from './components/landing/HomePage';
 import AnalysisLoading from './components/loading/AnalysisLoading';
 import { colors } from './utils/theme';
 import axios from 'axios';
-
-// API URL configuration
-const API_BASE_URL =
-  process.env.NODE_ENV === 'production'
-    ? 'https://branded-content-ai-a6ff96db0804.herokuapp.com'
-    : 'http://localhost:5000';
+import { API_BASE_URL } from './config';
 
 console.log(
-  `Using API base URL: ${API_BASE_URL} (${process.env.NODE_ENV} environment)`
+  `[App] Using API base URL: ${API_BASE_URL} (${process.env.NODE_ENV} environment)`
 );
 
 function App() {
@@ -26,83 +21,7 @@ function App() {
   const [analysisId, setAnalysisId] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
 
-  // Poll for analysis progress when in loading state
-  useEffect(() => {
-    if (appState === 'loading' && analysisId) {
-      // Set up polling interval to check progress
-      const interval = setInterval(async () => {
-        try {
-          const response = await axios.get(
-            `${API_BASE_URL}/api/analysis-progress/${analysisId}`
-          );
-          const { progress, step, status, result } = response.data;
-
-          // Update UI with progress
-          setLoadingProgress(progress);
-          setLoadingStep(step);
-          setLoadingStatus(status); // Store the status for display
-
-          // If analysis is complete, show the dashboard
-          if (status === 'completed' && result) {
-            setAnalysisData(result);
-            setLoadingProgress(100);
-
-            // Wait a moment to show 100% completion before switching to dashboard
-            setTimeout(() => {
-              setAppState('dashboard');
-              // Stop polling
-              clearInterval(interval);
-              setPollingInterval(null);
-            }, 1000);
-          } else if (progress === 100 && status === 'completed') {
-            // Handle case where result might be stored separately
-            try {
-              // Fetch the completed analysis result
-              const resultResponse = await axios.get(
-                `${API_BASE_URL}/api/analyses`
-              );
-
-              // Find our analysis
-              const completedAnalysis = resultResponse.data.analyses.find(
-                analysis => analysis.metadata.id === analysisId
-              );
-
-              if (completedAnalysis && completedAnalysis.analysis_data) {
-                setAnalysisData(completedAnalysis.analysis_data);
-
-                // Wait a moment to show 100% completion before switching to dashboard
-                setTimeout(() => {
-                  setAppState('dashboard');
-                  // Stop polling
-                  clearInterval(interval);
-                  setPollingInterval(null);
-                }, 1000);
-              }
-            } catch (resultError) {
-              console.error('Error fetching completed analysis:', resultError);
-            }
-          } else if (status === 'error') {
-            // Handle error state
-            alert('Analysis failed. Please try again.');
-            setAppState('home');
-            // Stop polling
-            clearInterval(interval);
-            setPollingInterval(null);
-          }
-        } catch (error) {
-          console.error('Error checking analysis progress:', error);
-        }
-      }, 2000); // Check every 2 seconds
-
-      setPollingInterval(interval);
-
-      return () => {
-        if (interval) {
-          clearInterval(interval);
-        }
-      };
-    }
-  }, [appState, analysisId]);
+  // Remove the polling effect since it's now handled in AnalysisLoading component
 
   // Clean up polling when component unmounts
   useEffect(() => {
@@ -175,12 +94,14 @@ function App() {
     setLoadingProgress(0);
     setLoadingStep(0);
     setLoadingStatus('initializing');
+    setAnalysisId(null); // Reset analysisId when starting new analysis
 
     try {
       let response;
 
       if (content.type === 'url') {
         // API call for URL analysis
+        console.log('Starting URL analysis for:', content.content);
         response = await axios.post(`${API_BASE_URL}/api/analyze-unified`, {
           url: content.content
         });
@@ -211,15 +132,17 @@ function App() {
 
       // On successful request, store the analysis ID and continue to loading screen
       if (response.data && response.data.analysis_id) {
+        console.log('Analysis started with ID:', response.data.analysis_id);
         setAnalysisId(response.data.analysis_id);
       } else {
         // Handle error if no analysis ID
+        console.error('No analysis_id received in response:', response.data);
         alert('Failed to start analysis. Please try again.');
         setAppState('home');
       }
     } catch (error) {
       console.error('Failed to start analysis:', error);
-      alert('Analysis failed to start. Please try again.');
+      alert(`Analysis failed to start: ${error.message}`);
       setAppState('home');
     }
   };
@@ -268,6 +191,68 @@ function App() {
                 ? analysisContent.content
                 : analysisContent?.content?.name
             }
+            analysisId={analysisId}
+            onAnalysisComplete={(resultId, metadata) => {
+              console.log('Analysis complete with result ID:', resultId);
+              // Fetch the analysis data
+              (async () => {
+                try {
+                  if (resultId) {
+                    console.log(`Fetching analysis data for ID: ${resultId}`);
+                    const response = await axios.get(
+                      `${API_BASE_URL}/api/analysis/${resultId}`
+                    );
+
+                    // Log the complete response for debugging
+                    console.log('Full analysis response:', response);
+
+                    if (response.data) {
+                      // API might return analysis data directly or nested in analysis_data
+                      const analysisData =
+                        response.data.analysis_data || response.data;
+
+                      console.log('Parsed analysis data:', analysisData);
+
+                      // The dashboard expects a complete data structure
+                      setAnalysisData(analysisData);
+                      setAppState('dashboard');
+                    } else {
+                      console.warn('Received response but no analysis data');
+                      // Create minimal data structure for dashboard
+                      const fallbackData = {
+                        metadata: {
+                          id: resultId,
+                          ...(metadata || {})
+                        },
+                        summary: {
+                          content_overview:
+                            'Analysis data incomplete or unavailable',
+                          overall_performance_score: 0
+                        }
+                      };
+                      setAnalysisData(fallbackData);
+                      setAppState('dashboard');
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error fetching completed analysis:', error);
+                  // Create minimal data structure with error info
+                  const errorData = {
+                    metadata: {
+                      id: resultId,
+                      error: error.message,
+                      ...(metadata || {})
+                    },
+                    summary: {
+                      content_overview: `Error loading analysis: ${error.message}`,
+                      overall_performance_score: 0
+                    }
+                  };
+                  setAnalysisData(errorData);
+                  setAppState('dashboard');
+                }
+              })();
+            }}
             onCompleteClick={() => {
               // Force transition to dashboard if button is clicked
               if (analysisData) {

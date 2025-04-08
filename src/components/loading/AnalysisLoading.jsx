@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
 import {
   colors,
   gradients,
@@ -59,8 +60,12 @@ const AnalysisLoading = ({
   });
   const [error, setError] = useState(null);
   const [analysisMetadata, setAnalysisMetadata] = useState({});
-  const [pollingInterval, setPollingInterval] = useState(null);
+  const pollingIntervalRef = useRef(null);
   const [errorCount, setErrorCount] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
+  const abortControllerRef = useRef(null);
+  const backoffTimeRef = useRef(2000); // Start with 2s, will increase on failures
+  const isMountedRef = useRef(true);
 
   // Updated steps array with more detail
   const steps = [
@@ -79,95 +84,344 @@ const AnalysisLoading = ({
   ];
 
   // Function to convert status to user-friendly message
-  const getStatusMessage = statusCode => {
-    // If no statusCode is provided, use component's status state
-    const currentStatus = statusCode || status;
+  const getStatusMessage = useCallback(
+    statusCode => {
+      // If no statusCode is provided, use component's status state
+      const currentStatus = statusCode || status;
 
-    // If no status is available, return the current step message
-    if (
-      !currentStatus &&
-      currentStep !== undefined &&
-      steps &&
-      steps.length > 0
-    ) {
-      return steps[currentStep];
-    }
+      // If no status is available, return the current step message
+      if (
+        !currentStatus &&
+        currentStep !== undefined &&
+        steps &&
+        steps.length > 0
+      ) {
+        return steps[currentStep];
+      }
 
-    const statusMessages = {
-      initializing: 'Initializing analysis...',
-      downloading_video: 'Downloading video content...',
-      download_complete: 'Download complete, preparing for analysis...',
-      uploading_to_s3: 'Uploading to processing servers...',
-      running_gemini_analysis: 'Running Gemini AI analysis...',
-      running_clarifai_analysis: 'Running ClarifAI visual analysis...',
-      processing_with_ai_models: 'Processing with multiple AI models...',
-      gemini_started: 'Starting Gemini language-based analysis...',
-      clarifai_started: 'Starting ClarifAI visual analysis...',
-      gemini_complete: 'Gemini language analysis complete!',
-      gemini_analysis_complete: 'Gemini analysis complete...',
-      clarifai_complete: 'ClarifAI visual analysis complete!',
-      clarifai_analysis_complete: 'ClarifAI visual analysis complete...',
-      generating_unified_analysis: 'Generating comprehensive insights...',
-      validating_unified: 'Validating and refining results...',
-      validating_analysis: 'Validating and refining results...',
-      finalizing_results: 'Finalizing results and visualizations...',
-      completed: 'Analysis complete!',
-      error: 'An error occurred during analysis.',
-      captcha_error: 'YouTube CAPTCHA verification required.'
-    };
+      const statusMessages = {
+        initializing: 'Initializing analysis...',
+        downloading_video: 'Downloading video content...',
+        download_complete: 'Download complete, preparing for analysis...',
+        uploading_to_s3: 'Uploading to processing servers...',
+        running_gemini_analysis: 'Running Gemini AI analysis...',
+        running_clarifai_analysis: 'Running ClarifAI visual analysis...',
+        processing_with_ai_models: 'Processing with multiple AI models...',
+        gemini_started: 'Starting Gemini language-based analysis...',
+        clarifai_started: 'Starting ClarifAI visual analysis...',
+        gemini_complete: 'Gemini language analysis complete!',
+        gemini_analysis_complete: 'Gemini analysis complete...',
+        clarifai_complete: 'ClarifAI visual analysis complete!',
+        clarifai_analysis_complete: 'ClarifAI visual analysis complete...',
+        generating_unified_analysis: 'Generating comprehensive insights...',
+        validating_unified: 'Validating and refining results...',
+        validating_analysis: 'Validating and refining results...',
+        finalizing_results: 'Finalizing results and visualizations...',
+        completed: 'Analysis complete!',
+        error: 'An error occurred during analysis.',
+        captcha_error: 'YouTube CAPTCHA verification required.'
+      };
 
-    // Return the message if found, or a generic message with the raw status
-    return (
-      statusMessages[currentStatus] ||
-      (steps && currentStep !== undefined
-        ? steps[currentStep]
-        : `Processing: ${currentStatus}`)
-    );
-  };
+      // Return the message if found, or a generic message with the raw status
+      return (
+        statusMessages[currentStatus] ||
+        (steps && currentStep !== undefined
+          ? steps[currentStep]
+          : `Processing: ${currentStatus}`)
+      );
+    },
+    [currentStep, status, steps]
+  );
 
-  // Calculate particle positions based on mouse movement
+  // Calculate particle positions based on mouse movement - fixed to avoid infinite re-renders
   useEffect(() => {
-    if (containerRef.current) {
-      const bounds = containerRef.current.getBoundingClientRect();
-      setContainerBounds({
-        left: bounds.left,
-        top: bounds.top,
-        width: bounds.width,
-        height: bounds.height
-      });
-    }
+    if (!containerRef.current) return;
 
-    const handleMouseMove = event => {
+    // Set initial bounds
+    const updateBounds = () => {
       if (containerRef.current) {
-        setMousePosition({
-          x: event.clientX - containerBounds.left,
-          y: event.clientY - containerBounds.top
+        const bounds = containerRef.current.getBoundingClientRect();
+        setContainerBounds({
+          left: bounds.left,
+          top: bounds.top,
+          width: bounds.width,
+          height: bounds.height
         });
       }
     };
 
+    // Initialize bounds
+    updateBounds();
+
+    // Create handler function that uses the latest bounds from ref
+    const handleMouseMove = event => {
+      if (!containerRef.current) return;
+
+      const bounds = containerRef.current.getBoundingClientRect();
+      setMousePosition({
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top
+      });
+    };
+
+    // Add event listeners
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('resize', updateBounds);
+
+    // Clean up on unmount
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', updateBounds);
     };
-  }, [containerBounds]);
+  }, []); // Empty dependency array means this effect runs once on mount
 
-  // Generate particle array
-  const particles = Array.from({ length: 30 }, (_, i) => ({
-    id: i,
-    size: Math.random() * 12 + 4,
-    color:
-      i % 4 === 0
-        ? colors.accent.teal
-        : i % 4 === 1
-        ? colors.primary.main
-        : i % 4 === 2
-        ? colors.accent.purple
-        : colors.accent.pink,
-    initialX: Math.random() * 100,
-    initialY: Math.random() * 100,
-    speed: Math.random() * 5 + 2
-  }));
+  // Generate particle array - moved outside of render to prevent recreating on each render
+  const particles = useRef(
+    Array.from({ length: 30 }, (_, i) => ({
+      id: i,
+      size: Math.random() * 12 + 4,
+      color:
+        i % 4 === 0
+          ? colors.accent.teal
+          : i % 4 === 1
+          ? colors.primary.main
+          : i % 4 === 2
+          ? colors.accent.purple
+          : colors.accent.pink,
+      initialX: Math.random() * 100,
+      initialY: Math.random() * 100,
+      speed: Math.random() * 5 + 2
+    }))
+  ).current;
+
+  // Clean up resources on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+
+      // Cancel any ongoing API requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Clear polling interval
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, []);
+
+  // Function to stop polling
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      console.log('Stopping polling interval');
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+
+    // Also cancel any ongoing requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  }, []);
+
+  // Function to fetch analysis progress from the API
+  const fetchAnalysisProgress = useCallback(async () => {
+    if (!analysisId || !isMountedRef.current) {
+      return;
+    }
+
+    // Cancel any previous requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create a new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
+    try {
+      console.log(`Fetching progress for analysis ${analysisId}`);
+      const response = await axios.get(
+        `${API_BASE_URL}/api/analysis-progress/${analysisId}`,
+        {
+          signal: abortControllerRef.current.signal,
+          timeout: 5000 // 5 second timeout
+        }
+      );
+
+      // Component may have unmounted during request
+      if (!isMountedRef.current) return;
+
+      const data = response.data;
+      console.log('Progress data:', data);
+
+      // Reset error count and backoff time on successful response
+      if (errorCount > 0) {
+        setErrorCount(0);
+        backoffTimeRef.current = 2000; // Reset backoff time on success
+      }
+
+      // Update metadata if available
+      if (data.metadata) {
+        setAnalysisMetadata(data.metadata);
+      }
+
+      if (data.status === 'error') {
+        // Check if it's a YouTube CAPTCHA error
+        if (
+          data.message &&
+          (data.message.includes('CAPTCHA') || data.message.includes('YouTube'))
+        ) {
+          console.error('YouTube CAPTCHA error detected:', data.message);
+          setError(
+            `YouTube requires CAPTCHA verification for this video. Please try uploading the video file directly instead of using a YouTube URL.`
+          );
+        } else {
+          console.error('Analysis error:', data.message);
+          setError(
+            data.message ||
+              'An error occurred during analysis. Please try again.'
+          );
+        }
+
+        // Update UI states
+        setProgress(0);
+        setCurrentStep(0);
+        setStatus('error');
+        stopPolling();
+        return;
+      }
+
+      // Update UI states based on progress
+      if (data.progress !== undefined) {
+        setProgress(data.progress);
+      }
+
+      if (data.step !== undefined) {
+        setCurrentStep(data.step);
+      }
+
+      if (data.status) {
+        setStatus(data.status);
+        setStatusMessage(data.message || getStatusMessage(data.status));
+      }
+
+      // If analysis is complete, notify parent component - only once
+      if (data.status === 'completed' && onAnalysisComplete && !isComplete) {
+        console.log('Analysis complete, calling onAnalysisComplete');
+        stopPolling();
+        setIsComplete(true);
+
+        // First check if there's a result object with data we need
+        if (data.result) {
+          console.log(
+            'Analysis result data found in progress response:',
+            data.result.id || analysisId
+          );
+          onAnalysisComplete(
+            data.result.id || analysisId,
+            data.metadata || data.result.metadata
+          );
+        } else {
+          // Otherwise use the result_id or analysisId for retrieving data
+          console.log(
+            'No result data found, using result_id or analysisId:',
+            data.result_id || analysisId
+          );
+          onAnalysisComplete(data.result_id || analysisId, data.metadata);
+        }
+      }
+    } catch (error) {
+      // Component may have unmounted during request
+      if (!isMountedRef.current) return;
+
+      // Don't report errors from aborted requests
+      if (axios.isCancel(error)) {
+        console.log('Request was cancelled:', error.message);
+        return;
+      }
+
+      console.error('Error fetching analysis progress:', error);
+
+      // Implement exponential backoff for repeated errors
+      setErrorCount(prev => {
+        const newCount = prev + 1;
+
+        // Increase backoff time exponentially (max 30 seconds)
+        if (newCount > 2) {
+          backoffTimeRef.current = Math.min(
+            backoffTimeRef.current * 1.5,
+            30000
+          );
+          console.log(`Increased backoff time to ${backoffTimeRef.current}ms`);
+        }
+
+        return newCount;
+      });
+
+      // Show an error message after several consecutive failures
+      if (errorCount >= 3) {
+        setError(
+          'Having trouble connecting to the server. Will keep trying...'
+        );
+      }
+
+      // Show a more permanent error after many failures
+      if (errorCount >= 10) {
+        stopPolling();
+        setError(
+          'Could not connect to the analysis server. Please try again later or check your connection.'
+        );
+      }
+    }
+  }, [
+    analysisId,
+    errorCount,
+    getStatusMessage,
+    isComplete,
+    onAnalysisComplete,
+    stopPolling
+  ]);
+
+  // Set up polling to check analysis progress
+  useEffect(() => {
+    // Clean up any existing polling
+    stopPolling();
+
+    if (analysisId && !isComplete) {
+      console.log(
+        'Starting polling for analysis progress with ID:',
+        analysisId
+      );
+
+      // Initial fetch immediately
+      fetchAnalysisProgress();
+
+      // Set up polling with dynamic interval based on backoff
+      const setupPolling = () => {
+        pollingIntervalRef.current = setTimeout(() => {
+          fetchAnalysisProgress();
+
+          // Set up next polling cycle if component is still mounted and not complete
+          if (isMountedRef.current && !isComplete) {
+            setupPolling();
+          }
+        }, backoffTimeRef.current);
+      };
+
+      setupPolling();
+
+      // Clean up on unmount or when dependencies change
+      return () => {
+        console.log('Cleaning up polling interval');
+        stopPolling();
+      };
+    }
+  }, [analysisId, fetchAnalysisProgress, isComplete, stopPolling]);
 
   const getProgressColor = () => {
     if (progress < 30) return colors.primary.main;
@@ -483,140 +737,6 @@ const AnalysisLoading = ({
       </div>
     );
   };
-
-  // Clean up polling interval when component unmounts
-  const stopPolling = () => {
-    if (pollingInterval) {
-      clearInterval(pollingInterval);
-      setPollingInterval(null);
-    }
-  };
-
-  // Function to fetch analysis progress from the API
-  const fetchAnalysisProgress = useCallback(async () => {
-    if (!analysisId) {
-      console.error('No analysis ID provided for progress check');
-      setError('No analysis ID found. Please try again.');
-      return;
-    }
-
-    try {
-      console.log(`Fetching progress for analysis ${analysisId}`);
-      const response = await fetch(
-        `${API_BASE_URL}/api/analysis-progress/${analysisId}`
-      );
-
-      if (!response.ok) {
-        setErrorCount(prev => prev + 1);
-        console.error(
-          `Error fetching analysis progress: ${response.status} ${response.statusText}`
-        );
-
-        if (response.status === 404) {
-          console.log(
-            'Analysis not found, might still be initializing or was lost'
-          );
-          // If we've tried several times and still getting 404, show a message
-          if (errorCount > 5) {
-            setError(
-              'Analysis not found. It may have been lost or failed to start.'
-            );
-          }
-          return;
-        }
-
-        throw new Error(`API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Progress data:', data);
-
-      // Reset error count on successful response
-      setErrorCount(0);
-
-      if (data.metadata) {
-        setAnalysisMetadata(data.metadata);
-      }
-
-      if (data.status === 'error') {
-        // Check if it's a YouTube CAPTCHA error
-        if (
-          data.message &&
-          (data.message.includes('CAPTCHA') || data.message.includes('YouTube'))
-        ) {
-          console.error('YouTube CAPTCHA error detected:', data.message);
-          setError(
-            `YouTube requires CAPTCHA verification for this video. Please try uploading the video file directly instead of using a YouTube URL.`
-          );
-        } else {
-          console.error('Analysis error:', data.message);
-          setError(
-            data.message ||
-              'An error occurred during analysis. Please try again.'
-          );
-        }
-
-        // Update UI states
-        setProgress(0);
-        setCurrentStep(0);
-        setStatus('error');
-        return;
-      }
-
-      // Update UI states based on progress
-      if (data.progress !== undefined) {
-        setProgress(data.progress);
-      }
-
-      if (data.step !== undefined) {
-        setCurrentStep(data.step);
-      }
-
-      if (data.status) {
-        setStatus(data.status);
-        setStatusMessage(data.message || getStatusMessage(data.status));
-      }
-
-      // If analysis is complete, notify parent component
-      if (data.status === 'completed' && onAnalysisComplete) {
-        console.log('Analysis complete, calling onAnalysisComplete');
-        stopPolling();
-        onAnalysisComplete(data.result_id || analysisId, data.metadata);
-      }
-    } catch (error) {
-      console.error('Error fetching analysis progress:', error);
-      setErrorCount(prev => prev + 1);
-
-      // Only set error after several failed attempts to avoid flickering
-      if (errorCount > 3) {
-        setError(`Failed to check analysis progress. ${error.message}`);
-      }
-    }
-  }, [analysisId, errorCount, onAnalysisComplete, stopPolling]);
-
-  // Set up polling to check analysis progress
-  useEffect(() => {
-    if (analysisId) {
-      console.log(
-        'Starting polling for analysis progress with ID:',
-        analysisId
-      );
-      // Initial fetch
-      fetchAnalysisProgress();
-
-      // Set up polling interval (every 2 seconds)
-      const interval = setInterval(fetchAnalysisProgress, 2000);
-      setPollingInterval(interval);
-
-      // Clean up on unmount
-      return () => {
-        console.log('Cleaning up polling interval');
-        stopPolling();
-      };
-    } else {
-      console.log("No analysisId provided, polling won't start");
-    }
-  }, [analysisId, fetchAnalysisProgress]);
 
   return (
     <motion.div
