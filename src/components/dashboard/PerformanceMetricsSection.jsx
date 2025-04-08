@@ -13,6 +13,39 @@ const PerformanceMetricsSection = ({ metrics }) => {
     visible: { opacity: 1, y: 0 }
   };
 
+  // Return empty component if no metrics data is available
+  if (!metrics) {
+    return (
+      <Section title="Performance Metrics">
+        <div style={{ textAlign: 'center', padding: spacing.md }}>
+          No performance metrics available.
+        </div>
+      </Section>
+    );
+  }
+
+  // Safely extract metric values with fallbacks
+  const engagement = metrics.engagement || {
+    score: 0,
+    confidence: 'N/A',
+    breakdown: {}
+  };
+  const shareability = metrics.shareability || {
+    score: 0,
+    confidence: 'N/A',
+    breakdown: {}
+  };
+  const conversion = metrics.conversion_potential || {
+    score: 0,
+    confidence: 'N/A',
+    breakdown: {}
+  };
+  const virality = metrics.viral_potential || {
+    score: 0,
+    confidence: 'N/A',
+    breakdown: {}
+  };
+
   // Format data for radar chart
   const radarData = {
     labels: ['Engagement', 'Shareability', 'Conversion', 'Virality'],
@@ -20,10 +53,10 @@ const PerformanceMetricsSection = ({ metrics }) => {
       {
         label: 'Performance Metrics',
         data: [
-          metrics.engagement.score,
-          metrics.shareability.score,
-          metrics.conversion_potential.score,
-          metrics.viral_potential.score
+          engagement.score,
+          shareability.score,
+          conversion.score,
+          virality.score
         ],
         backgroundColor: `${colors.primary.main}40`,
         borderColor: colors.primary.main,
@@ -206,18 +239,10 @@ const PerformanceMetricsSection = ({ metrics }) => {
           justifyContent: 'space-between'
         }}
       >
-        {renderMetricBreakdown('Engagement', metrics.engagement, '👁️')}
-        {renderMetricBreakdown('Shareability', metrics.shareability, '🔄')}
-        {renderMetricBreakdown(
-          'Conversion Potential',
-          metrics.conversion_potential,
-          '🎯'
-        )}
-        {renderMetricBreakdown(
-          'Viral Potential',
-          metrics.viral_potential,
-          '📈'
-        )}
+        {renderMetricBreakdown('Engagement', engagement, '👁️')}
+        {renderMetricBreakdown('Shareability', shareability, '🔄')}
+        {renderMetricBreakdown('Conversion Potential', conversion, '🎯')}
+        {renderMetricBreakdown('Viral Potential', virality, '📈')}
       </div>
     </Section>
   );

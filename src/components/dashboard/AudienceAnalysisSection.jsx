@@ -32,70 +32,51 @@ const AudienceAnalysisSection = ({ audienceData }) => {
 
   // Format data for charts
   const formatDemographicData = distribution => {
+    if (!distribution) return [];
     return Object.entries(distribution).map(([key, value]) => ({
       label: key,
-      value:
-        typeof value === 'string'
-          ? value === 'high'
-            ? 80
-            : value === 'moderate'
-            ? 50
-            : value === 'low'
-            ? 30
-            : value === 'some'
-            ? 40
-            : value === 'prominent'
-            ? 70
-            : value === 'slightly higher'
-            ? 60
-            : 45
-          : value
+      value: typeof value === 'number' ? value : 0
     }));
   };
 
+  // Safely check for demographics data
+  const demographics =
+    audienceData?.representation_metrics?.demographics_breakdown || {};
+  const ageDistribution = demographics.age_distribution || {};
+  const genderDistribution = demographics.gender_distribution || {};
+  const ethnicityDistribution = demographics.ethnicity_distribution || {};
+
   const ageDistributionData = {
-    labels: Object.keys(
-      audienceData.representation_metrics.demographics_breakdown
-        .age_distribution
-    ),
+    labels: Object.keys(ageDistribution),
     datasets: [
       {
-        data: Object.values(
-          audienceData.representation_metrics.demographics_breakdown
-            .age_distribution
-        ).map(value =>
-          value === 'high' ? 80 : value === 'moderate' ? 50 : 30
-        ),
+        data: Object.values(ageDistribution),
         backgroundColor: [colors.primary.main, colors.accent.blue],
         borderWidth: 1
       }
     ]
   };
 
-  const genderDistribution = formatDemographicData(
-    audienceData.representation_metrics.demographics_breakdown
-      .gender_distribution
-  );
   const genderData = {
-    labels: genderDistribution.map(item => item.label),
+    labels: formatDemographicData(genderDistribution).map(item => item.label),
     datasets: [
       {
-        data: genderDistribution.map(item => item.value),
+        data: formatDemographicData(genderDistribution).map(item => item.value),
         backgroundColor: [colors.accent.purple, colors.accent.blue],
         borderWidth: 1
       }
     ]
   };
 
-  const ethnicityDistribution = formatDemographicData(
-    audienceData.representation_metrics.demographics_breakdown
-      .ethnicity_distribution
-  );
   const ethnicityData = {
-    labels: ethnicityDistribution.map(item => item.label),
+    labels: formatDemographicData(ethnicityDistribution).map(
+      item => item.label
+    ),
     datasets: [
       {
-        data: ethnicityDistribution.map(item => item.value),
+        data: formatDemographicData(ethnicityDistribution).map(
+          item => item.value
+        ),
         backgroundColor: [
           colors.primary.main,
           colors.primary.light,

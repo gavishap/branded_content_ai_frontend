@@ -29,6 +29,17 @@ const EmotionalAnalysisSection = ({ emotionalData }) => {
     visible: { opacity: 1, y: 0 }
   };
 
+  // Return empty component if no emotional data is available
+  if (!emotionalData) {
+    return (
+      <Section title="Emotional Analysis">
+        <div style={{ textAlign: 'center', padding: spacing.md }}>
+          No emotional analysis data available.
+        </div>
+      </Section>
+    );
+  }
+
   // Format data for emotion chart
   const emotionColorMap = {
     happiness: colors.accent.green,
@@ -49,8 +60,8 @@ const EmotionalAnalysisSection = ({ emotionalData }) => {
     fear: 0.05
   };
 
-  // Get dominant emotions and assign values
-  const dominantEmotions = emotionalData.dominant_emotions.reduce(
+  // Get dominant emotions and assign values with fallback
+  const dominantEmotions = (emotionalData.dominant_emotions || []).reduce(
     (acc, emotion, index) => {
       // If we have actual values, use them, otherwise use calculated values based on position
       const value = emotionValues[emotion] || 0.5 / Math.pow(1.5, index);
@@ -59,6 +70,11 @@ const EmotionalAnalysisSection = ({ emotionalData }) => {
     },
     {}
   );
+
+  // Add default emotions if none are available
+  if (Object.keys(dominantEmotions).length === 0) {
+    dominantEmotions.neutral = 1;
+  }
 
   const emotionChartData = {
     labels: Object.keys(dominantEmotions),
