@@ -51,7 +51,13 @@ const AnalysisDashboard = ({ data }) => {
       market_positioning: 'No data available',
       confidence: 'Low'
     },
-    optimization_recommendations: data.optimization_recommendations || {},
+    optimization_recommendations: Array.isArray(
+      data.optimization_recommendations
+    )
+      ? data.optimization_recommendations
+      : data.optimization_recommendations
+      ? Object.values(data.optimization_recommendations).flat()
+      : [],
     transcription_analysis: data.transcription_analysis || {},
     contradiction_analysis: data.contradiction_analysis || []
   };
@@ -100,6 +106,16 @@ const AnalysisDashboard = ({ data }) => {
       isUrl: true
     });
   }
+
+  // Filter recommendations to ensure they are valid and have required fields
+  const validRecommendations = safeData.optimization_recommendations.filter(
+    rec =>
+      rec &&
+      rec.area &&
+      rec.recommendation &&
+      rec.expected_impact &&
+      rec.confidence
+  );
 
   return (
     <motion.div
@@ -324,9 +340,7 @@ const AnalysisDashboard = ({ data }) => {
         </Section>
 
         {/* Optimization recommendations section */}
-        <RecommendationsPanel
-          recommendations={safeData.optimization_recommendations}
-        />
+        <RecommendationsPanel recommendations={validRecommendations} />
 
         {/* Transcription section */}
         <TranscriptionSection

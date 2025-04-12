@@ -50,7 +50,27 @@ const AudienceAnalysisSection = ({ audienceData }) => {
     labels: Object.keys(ageDistribution),
     datasets: [
       {
-        data: Object.values(ageDistribution),
+        label: 'Age Distribution',
+        data: Object.entries(ageDistribution).map(([key, value]) => {
+          // Ensure value is a number
+          if (typeof value === 'number') {
+            return value;
+          }
+          // Convert known text values to numbers
+          if (typeof value === 'string') {
+            const valueMap = {
+              high: 80,
+              'slightly higher': 65,
+              moderate: 50,
+              prominent: 60,
+              some: 30,
+              low: 20
+            };
+            return valueMap[value.toLowerCase()] || 0;
+          }
+          // Default to 0 for any other type (boolean, null, undefined, etc.)
+          return 0;
+        }),
         backgroundColor: [colors.primary.main, colors.accent.blue],
         borderWidth: 1
       }
@@ -58,10 +78,30 @@ const AudienceAnalysisSection = ({ audienceData }) => {
   };
 
   const genderData = {
-    labels: formatDemographicData(genderDistribution).map(item => item.label),
+    labels: Object.keys(genderDistribution),
     datasets: [
       {
-        data: formatDemographicData(genderDistribution).map(item => item.value),
+        label: 'Gender Distribution',
+        data: Object.entries(genderDistribution).map(([key, value]) => {
+          // Ensure value is a number
+          if (typeof value === 'number') {
+            return value;
+          }
+          // Convert known text values to numbers
+          if (typeof value === 'string') {
+            const valueMap = {
+              high: 80,
+              'slightly higher': 65,
+              moderate: 50,
+              prominent: 60,
+              some: 30,
+              low: 20
+            };
+            return valueMap[value.toLowerCase()] || 0;
+          }
+          // Default to 0 for any other type
+          return 0;
+        }),
         backgroundColor: [colors.accent.purple, colors.accent.blue],
         borderWidth: 1
       }
@@ -69,14 +109,30 @@ const AudienceAnalysisSection = ({ audienceData }) => {
   };
 
   const ethnicityData = {
-    labels: formatDemographicData(ethnicityDistribution).map(
-      item => item.label
-    ),
+    labels: Object.keys(ethnicityDistribution),
     datasets: [
       {
-        data: formatDemographicData(ethnicityDistribution).map(
-          item => item.value
-        ),
+        label: 'Ethnicity Distribution',
+        data: Object.entries(ethnicityDistribution).map(([key, value]) => {
+          // Ensure value is a number
+          if (typeof value === 'number') {
+            return value;
+          }
+          // Convert known text values to numbers
+          if (typeof value === 'string') {
+            const valueMap = {
+              high: 80,
+              'slightly higher': 65,
+              moderate: 50,
+              prominent: 60,
+              some: 30,
+              low: 20
+            };
+            return valueMap[value.toLowerCase()] || 0;
+          }
+          // Default to 0 for any other type
+          return 0;
+        }),
         backgroundColor: [
           colors.primary.main,
           colors.primary.light,

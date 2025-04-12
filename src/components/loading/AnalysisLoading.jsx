@@ -229,26 +229,86 @@ const AnalysisLoading = ({
     }
   }, []);
 
+  // Helper function to handle errors
+  const handleError = useCallback(
+    error => {
+      console.error('Error fetching analysis progress:', error);
+
+      setErrorCount(prev => {
+        const newCount = prev + 1;
+        if (newCount > 2) {
+          backoffTimeRef.current = Math.min(
+            backoffTimeRef.current * 1.5,
+            30000
+          );
+          console.log(`Increased backoff time to ${backoffTimeRef.current}ms`);
+        }
+        return newCount;
+      });
+
+      if (errorCount >= 3) {
+        setError(
+          'Having trouble connecting to the server. Will keep trying...'
+        );
+      }
+
+      if (errorCount >= 10) {
+        stopPolling();
+        setError(
+          'Could not connect to the analysis server. Please try again later.'
+        );
+      }
+    },
+    [errorCount, stopPolling]
+  );
+
+  // Helper function to update progress
+  const updateProgress = useCallback(
+    data => {
+      if (data.progress !== undefined) {
+        setProgress(data.progress);
+      }
+      if (data.step !== undefined) {
+        setCurrentStep(data.step);
+      }
+      if (data.status) {
+        setStatus(data.status);
+        setStatusMessage(data.message || getStatusMessage(data.status));
+      }
+    },
+    [getStatusMessage]
+  );
+
+  // Helper function to handle completion
+  const handleCompletion = useCallback(
+    data => {
+      console.log('Analysis complete, calling onAnalysisComplete');
+      stopPolling();
+      setIsComplete(true);
+      setProgress(100);
+      setStatus('completed');
+
+      if (onAnalysisComplete) {
+        const resultId = data.result?.id || data.result_id || analysisId;
+        const metadata =
+          data.metadata || data.result?.metadata || analysisMetadata;
+        onAnalysisComplete(resultId, metadata);
+      }
+    },
+    [analysisId, analysisMetadata, onAnalysisComplete, stopPolling]
+  );
+
   // Function to fetch analysis progress from the API
   const fetchAnalysisProgress = useCallback(async () => {
     if (!analysisId || !isMountedRef.current) {
       return;
     }
 
-    // Cancel any previous requests
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Create a new abort controller for this request
-    abortControllerRef.current = new AbortController();
-
     try {
       console.log(`Fetching progress for analysis ${analysisId}`);
       const response = await axios.get(
         `${API_BASE_URL}/api/analysis-progress/${analysisId}`,
         {
-          signal: abortControllerRef.current.signal,
           timeout: 5000 // 5 second timeout
         }
       );
@@ -271,157 +331,80 @@ const AnalysisLoading = ({
       }
 
       if (data.status === 'error') {
-        // Check if it's a YouTube CAPTCHA error
-        if (
-          data.message &&
-          (data.message.includes('CAPTCHA') || data.message.includes('YouTube'))
-        ) {
-          console.error('YouTube CAPTCHA error detected:', data.message);
-          setError(
-            `YouTube requires CAPTCHA verification for this video. Please try uploading the video file directly instead of using a YouTube URL.`
-          );
-        } else {
-          console.error('Analysis error:', data.message);
-          setError(
-            data.message ||
-              'An error occurred during analysis. Please try again.'
-          );
-        }
-
-        // Update UI states
-        setProgress(0);
-        setCurrentStep(0);
-        setStatus('error');
-        stopPolling();
+        handleError(data.message);
         return;
       }
 
       // Update UI states based on progress
-      if (data.progress !== undefined) {
-        setProgress(data.progress);
-      }
+      updateProgress(data);
 
-      if (data.step !== undefined) {
-        setCurrentStep(data.step);
-      }
-
-      if (data.status) {
-        setStatus(data.status);
-        setStatusMessage(data.message || getStatusMessage(data.status));
-      }
-
-      // If analysis is complete, notify parent component - only once
-      if (data.status === 'completed' && onAnalysisComplete && !isComplete) {
-        console.log('Analysis complete, calling onAnalysisComplete');
-        stopPolling();
-        setIsComplete(true);
-
-        // First check if there's a result object with data we need
-        if (data.result) {
-          console.log(
-            'Analysis result data found in progress response:',
-            data.result.id || analysisId
-          );
-          onAnalysisComplete(
-            data.result.id || analysisId,
-            data.metadata || data.result.metadata
-          );
-        } else {
-          // Otherwise use the result_id or analysisId for retrieving data
-          console.log(
-            'No result data found, using result_id or analysisId:',
-            data.result_id || analysisId
-          );
-          onAnalysisComplete(data.result_id || analysisId, data.metadata);
-        }
+      // Check for completion
+      if (data.status === 'completed' && !isComplete) {
+        handleCompletion(data);
       }
     } catch (error) {
-      // Component may have unmounted during request
       if (!isMountedRef.current) return;
 
-      // Don't report errors from aborted requests
       if (axios.isCancel(error)) {
         console.log('Request was cancelled:', error.message);
         return;
       }
 
-      console.error('Error fetching analysis progress:', error);
-
-      // Implement exponential backoff for repeated errors
-      setErrorCount(prev => {
-        const newCount = prev + 1;
-
-        // Increase backoff time exponentially (max 30 seconds)
-        if (newCount > 2) {
-          backoffTimeRef.current = Math.min(
-            backoffTimeRef.current * 1.5,
-            30000
-          );
-          console.log(`Increased backoff time to ${backoffTimeRef.current}ms`);
-        }
-
-        return newCount;
-      });
-
-      // Show an error message after several consecutive failures
-      if (errorCount >= 3) {
-        setError(
-          'Having trouble connecting to the server. Will keep trying...'
-        );
+      // Special handling for 404 after we've seen progress
+      if (
+        error.response?.status === 404 &&
+        progress >= 30 &&
+        status === 'uploading_to_s3'
+      ) {
+        console.log('Got 404 after progress, treating as complete');
+        handleCompletion({
+          id: analysisId,
+          metadata: analysisMetadata
+        });
+        return;
       }
 
-      // Show a more permanent error after many failures
-      if (errorCount >= 10) {
-        stopPolling();
-        setError(
-          'Could not connect to the analysis server. Please try again later or check your connection.'
-        );
-      }
+      handleError(error);
     }
   }, [
     analysisId,
-    errorCount,
-    getStatusMessage,
+    progress,
+    status,
     isComplete,
-    onAnalysisComplete,
-    stopPolling
+    analysisMetadata,
+    handleError,
+    updateProgress,
+    handleCompletion,
+    errorCount
   ]);
 
   // Set up polling to check analysis progress
   useEffect(() => {
-    // Clean up any existing polling
-    stopPolling();
-
-    if (analysisId && !isComplete) {
-      console.log(
-        'Starting polling for analysis progress with ID:',
-        analysisId
-      );
-
-      // Initial fetch immediately
-      fetchAnalysisProgress();
-
-      // Set up polling with dynamic interval based on backoff
-      const setupPolling = () => {
-        pollingIntervalRef.current = setTimeout(() => {
-          fetchAnalysisProgress();
-
-          // Set up next polling cycle if component is still mounted and not complete
-          if (isMountedRef.current && !isComplete) {
-            setupPolling();
-          }
-        }, backoffTimeRef.current);
-      };
-
-      setupPolling();
-
-      // Clean up on unmount or when dependencies change
-      return () => {
-        console.log('Cleaning up polling interval');
-        stopPolling();
-      };
+    // Only start polling if we have an analysisId and aren't complete
+    if (!analysisId || isComplete) {
+      return;
     }
-  }, [analysisId, fetchAnalysisProgress, isComplete, stopPolling]);
+
+    console.log('Starting polling for analysis progress with ID:', analysisId);
+
+    // Initial fetch immediately
+    fetchAnalysisProgress();
+
+    // Set up polling interval
+    pollingIntervalRef.current = setInterval(() => {
+      if (!isMountedRef.current || isComplete) {
+        stopPolling();
+        return;
+      }
+      fetchAnalysisProgress();
+    }, backoffTimeRef.current);
+
+    // Clean up function
+    return () => {
+      console.log('Cleaning up polling interval');
+      stopPolling();
+    };
+  }, [analysisId, isComplete, fetchAnalysisProgress, stopPolling]);
 
   const getProgressColor = () => {
     if (progress < 30) return colors.primary.main;
