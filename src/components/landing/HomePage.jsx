@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import SavedAnalysesList from './SavedAnalysesList';
 import {
   colors,
   gradients,
@@ -24,11 +25,21 @@ const ALLOWED_VIDEO_TYPES = [
 // Also check file extensions for cases where MIME type detection fails
 const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mpeg', '.webm'];
 
-const HomePage = ({ onStartAnalysis }) => {
+const HomePage = ({ onStartAnalysis, onAnalysisSelect }) => {
   const [file, setFile] = useState(null);
+  const [analysisName, setAnalysisName] = useState('');
   const [dragging, setDragging] = useState(false);
   const [fileError, setFileError] = useState(null);
+  const [nameError, setNameError] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Handle name change
+  const handleNameChange = e => {
+    setAnalysisName(e.target.value);
+    if (e.target.value.trim()) {
+      setNameError(null);
+    }
+  };
 
   // Validation function to check if file is valid
   const validateFile = file => {
@@ -96,16 +107,37 @@ const HomePage = ({ onStartAnalysis }) => {
 
   const handleSubmit = e => {
     e.preventDefault();
-    // Always use file input now
-    if (file) {
-      const validation = validateFile(file);
-      if (validation.isValid) {
-        onStartAnalysis({ type: 'file', content: file });
-      } else {
-        setFileError(validation.error);
-      }
+    let isValid = true;
+
+    // Validate name
+    if (!analysisName.trim()) {
+      setNameError('Please enter a name for the analysis.');
+      isValid = false;
     } else {
+      setNameError(null);
+    }
+
+    // Validate file
+    if (!file) {
       setFileError('Please select a video file to upload.');
+      isValid = false;
+    } else {
+      const validation = validateFile(file);
+      if (!validation.isValid) {
+        setFileError(validation.error);
+        isValid = false;
+      } else {
+        setFileError(null);
+      }
+    }
+
+    // Proceed if both are valid
+    if (isValid) {
+      onStartAnalysis({
+        type: 'file',
+        content: file,
+        name: analysisName.trim()
+      });
     }
   };
 
@@ -160,10 +192,14 @@ const HomePage = ({ onStartAnalysis }) => {
       style={{
         padding: spacing.xl,
         maxWidth: '900px',
-        margin: `${spacing.xxl} auto`,
-        textAlign: 'center'
+        margin: `${spacing.xl} auto`
       }}
     >
+      {/* REORDERED: Recent Analyses Section FIRST */}
+      <div style={{ marginBottom: spacing.xxl }}>
+        <SavedAnalysesList onAnalysisSelect={onAnalysisSelect} />
+      </div>
+
       {/* Main Call to Action / Input Section */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -177,6 +213,7 @@ const HomePage = ({ onStartAnalysis }) => {
           padding: spacing.xl,
           boxShadow: shadows.lg,
           border: '1px solid rgba(255, 255, 255, 0.3)'
+          // Removed marginBottom here as SavedAnalysesList is now separate
         }}
         className="glass"
       >
@@ -185,10 +222,11 @@ const HomePage = ({ onStartAnalysis }) => {
             fontSize: typography.fontSize.xxl,
             marginBottom: spacing.lg,
             color: colors.primary.dark,
-            fontWeight: typography.fontWeights.bold
+            fontWeight: typography.fontWeights.bold,
+            textAlign: 'center' // Center title
           }}
         >
-          Analyze Your Branded Content
+          Analyze New Content
         </h2>
         <p
           style={{
@@ -196,24 +234,81 @@ const HomePage = ({ onStartAnalysis }) => {
             marginBottom: spacing.xl,
             color: colors.neutral.darkGrey,
             maxWidth: '600px',
-            margin: `0 auto ${spacing.xl} auto`
+            margin: `0 auto ${spacing.xl} auto`,
+            textAlign: 'center' // Center paragraph
           }}
         >
-          Upload your video file to get AI-powered insights and optimize its
-          performance.
+          Enter a name, then upload your video file to get AI-powered insights.
         </p>
 
         {/* File Upload Input Section */}
         <form onSubmit={handleSubmit} style={{ marginTop: spacing.lg }}>
+          {/* Analysis Name Input */}
+          <div style={{ marginBottom: spacing.lg }}>
+            <label
+              htmlFor="analysis-name-input"
+              style={{
+                display: 'block',
+                fontSize: typography.fontSize.lg,
+                fontWeight: typography.fontWeights.medium,
+                color: colors.primary.dark,
+                marginBottom: spacing.sm,
+                textAlign: 'left'
+              }}
+            >
+              Analysis Name:{' '}
+              <span style={{ color: colors.status.error }}>*</span>
+            </label>
+            <input
+              id="analysis-name-input"
+              type="text"
+              value={analysisName}
+              onChange={handleNameChange}
+              placeholder="e.g., Summer Campaign Video v1"
+              style={{
+                width: '100%',
+                padding: `${spacing.md} ${spacing.lg}`,
+                fontSize: typography.fontSize.lg,
+                border: `2px solid ${
+                  nameError ? colors.status.error : colors.neutral.lightGrey
+                }`,
+                borderRadius: borderRadius.lg,
+                transition: 'all 0.3s ease',
+                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)',
+                outline: 'none',
+                height: '50px'
+              }}
+            />
+            {nameError && (
+              <motion.p
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  color: colors.status.error,
+                  fontSize: typography.fontSize.sm,
+                  marginTop: spacing.xs,
+                  textAlign: 'left'
+                }}
+              >
+                {nameError}
+              </motion.p>
+            )}
+          </div>
+
+          {/* File Input Area */}
           <div
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            onClick={handleBrowseClick} // Trigger file input on click
+            onClick={handleBrowseClick}
             style={{
               border: `2px dashed ${
-                dragging ? colors.primary.main : colors.neutral.lightGrey
+                dragging
+                  ? colors.primary.main
+                  : fileError
+                  ? colors.status.error
+                  : colors.neutral.lightGrey
               }`,
               borderRadius: borderRadius.lg,
               padding: spacing.xl,
@@ -231,7 +326,7 @@ const HomePage = ({ onStartAnalysis }) => {
               ref={fileInputRef}
               onChange={handleFileChange}
               accept={ALLOWED_VIDEO_TYPES.join(',')}
-              style={{ display: 'none' }} // Hide the default input
+              style={{ display: 'none' }}
             />
             <FiUpload
               size={48}
@@ -274,31 +369,81 @@ const HomePage = ({ onStartAnalysis }) => {
             </motion.p>
           )}
 
-          <motion.button
-            type="submit"
-            disabled={!file}
-            whileHover={file ? { scale: 1.05, y: -2 } : {}}
-            whileTap={file ? { scale: 0.95 } : {}}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: spacing.sm,
-              padding: `${spacing.md} ${spacing.xl}`,
-              fontSize: typography.fontSize.lg,
-              fontWeight: typography.fontWeights.bold,
-              color: colors.neutral.white,
-              background: gradients.purplePrimary,
-              border: 'none',
-              borderRadius: borderRadius.lg,
-              cursor: file ? 'pointer' : 'not-allowed',
-              boxShadow: shadows.md,
-              opacity: file ? 1 : 0.6,
-              transition: 'all 0.3s ease'
-            }}
-          >
-            <FiPlay size={20} />
-            Analyze Video
-          </motion.button>
+          {/* Submit Button Area - Centered */}
+          <div style={{ textAlign: 'center' }}>
+            <motion.button
+              type="submit"
+              disabled={!file || !analysisName.trim()}
+              whileHover={
+                file && analysisName.trim() ? { scale: 1.05, y: -2 } : {}
+              }
+              whileTap={file && analysisName.trim() ? { scale: 0.95 } : {}}
+              style={{
+                // Basic styles (keep consistent)
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: spacing.md,
+                padding: `${spacing.lg} ${spacing.xxl}`,
+                fontSize: typography.fontSize.xl,
+                fontWeight: typography.fontWeights.bold,
+                border: 'none',
+                borderRadius: borderRadius.xl,
+                boxShadow:
+                  file && analysisName.trim()
+                    ? `0 8px 20px rgba(89, 56, 175, 0.4)`
+                    : `0 4px 12px rgba(0, 0, 0, 0.1)`,
+                transition: 'all 0.3s ease',
+                minWidth: '280px',
+                position: 'relative',
+                overflow: 'hidden',
+
+                // --- Conditional Styles ---
+                cursor: file && analysisName.trim() ? 'pointer' : 'not-allowed',
+                background:
+                  file && analysisName.trim()
+                    ? 'linear-gradient(135deg, #6942ef 0%, #9d41e0 100%)' // Rich purple gradient
+                    : '#f0f0f7', // Light gray for disabled
+                color: file && analysisName.trim() ? '#ffffff' : '#5c5c7a', // White for enabled, muted purple-gray for disabled
+                opacity: 1,
+                transform: 'translateY(0)',
+                letterSpacing: '0.5px',
+                textShadow:
+                  file && analysisName.trim()
+                    ? '0 1px 2px rgba(0,0,0,0.2)'
+                    : 'none'
+              }}
+            >
+              {/* Add pseudo-element glow effect for enabled state */}
+              {file && analysisName.trim() && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background:
+                      'radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%)',
+                    opacity: 0.6,
+                    pointerEvents: 'none'
+                  }}
+                />
+              )}
+
+              <FiPlay
+                size={28}
+                style={{
+                  filter:
+                    file && analysisName.trim()
+                      ? 'drop-shadow(0 2px 3px rgba(0,0,0,0.2))'
+                      : 'none',
+                  opacity: file && analysisName.trim() ? 1 : 0.5
+                }}
+              />
+              <span>Analyze Video</span>
+            </motion.button>
+          </div>
         </form>
       </motion.div>
     </motion.div>

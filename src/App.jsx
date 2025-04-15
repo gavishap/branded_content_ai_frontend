@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import AnalysisDashboard from './components/dashboard/AnalysisDashboard';
 import HomePage from './components/landing/HomePage';
@@ -80,79 +80,196 @@ function App() {
 
   // Handle starting the analysis process
   const handleStartAnalysis = async content => {
-    setAnalysisContent(content);
+    console.log('handleStartAnalysis called with:', content);
+    setAnalysisContent(content); // Store type, content, and name
 
-    // If it's a saved analysis, load it directly
-    if (content.type === 'saved' && content.savedAnalysisData) {
-      setAnalysisData(content.savedAnalysisData);
-      setAppState('dashboard');
+    // If it's a saved analysis being selected, handle differently
+    // This logic might be moved if SavedAnalysesList handles the fetch directly
+    if (content.type === 'saved') {
+      console.log('Loading saved analysis:', content.id);
+      // Trigger fetch for this ID and transition
+      fetchAndDisplayAnalysis(content.id);
       return;
     }
 
-    // For URLs and files, proceed with regular analysis
+    // For new file uploads, proceed with analysis request
     setAppState('loading');
     setLoadingProgress(0);
     setLoadingStep(0);
     setLoadingStatus('initializing');
-    setAnalysisId(null); // Reset analysisId when starting new analysis
+    setAnalysisId(null); // Reset previous analysis ID
 
     try {
-      let response;
-
-      if (content.type === 'url') {
-        // API call for URL analysis
-        console.log('Starting URL analysis for:', content.content);
-        response = await axios.post(`${API_BASE_URL}/api/analyze-unified`, {
-          url: content.content
-        });
-      } else {
-        // API call for file upload
-        const formData = new FormData();
-        formData.append('file', content.content);
-
-        console.log(
-          'Uploading file:',
-          content.content.name,
-          'Size:',
-          content.content.size,
-          'Type:',
-          content.content.type
-        );
-
-        response = await axios.post(
-          `${API_BASE_URL}/api/analyze-unified`,
-          formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          }
-        );
+      // Ensure it's a file upload (URL removed)
+      if (content.type !== 'file' || !content.content) {
+        throw new Error('Invalid content type for starting analysis.');
       }
 
-      // On successful request, store the analysis ID and continue to loading screen
+      const formData = new FormData();
+      formData.append('file', content.content); // The File object
+      // Add the analysis name to the form data
+      if (content.name) {
+        formData.append('name', content.name);
+      }
+
+      console.log(
+        'Uploading file:',
+        content.content.name,
+        'Analysis Name:',
+        content.name || '(Not provided)'
+      );
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/analyze-unified`,
+        formData,
+        {
+          headers: {
+            // Content-Type is automatically set by browser for FormData
+          }
+        }
+      );
+
       if (response.data && response.data.analysis_id) {
         console.log('Analysis started with ID:', response.data.analysis_id);
         setAnalysisId(response.data.analysis_id);
       } else {
-        // Handle error if no analysis ID
         console.error('No analysis_id received in response:', response.data);
-        alert('Failed to start analysis. Please try again.');
+        alert('Failed to start analysis. Please check server logs.');
         setAppState('home');
       }
     } catch (error) {
-      console.error('Failed to start analysis:', error);
-      alert(`Analysis failed to start: ${error.message}`);
+      console.error('Error starting analysis:', error);
+      alert(
+        `Failed to start analysis: ${
+          error.message || 'Unknown error'
+        }. Please try again.`
+      );
       setAppState('home');
     }
   };
 
-  // Handle returning to home from dashboard
+  // Function to fetch and display a specific analysis
+  const fetchAndDisplayAnalysis = async selectedAnalysisId => {
+    console.log(`Fetching full data for saved analysis: ${selectedAnalysisId}`);
+    setAppState('loading'); // Show loading indicator while fetching
+    setLoadingStatus('loading_saved');
+    setLoadingProgress(50); // Indicate progress
+
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/api/analysis/${selectedAnalysisId}`
+      );
+      if (response.data) {
+        setAnalysisData(response.data);
+        setAnalysisId(selectedAnalysisId); // Set the current ID
+        setAppState('dashboard');
+      } else {
+        throw new Error('Analysis data not found in response.');
+      }
+    } catch (error) {
+      console.error('Error fetching saved analysis:', error);
+      alert(
+        `Failed to load saved analysis: ${error.message || 'Unknown error'}`
+      );
+      setAnalysisData(null); // Clear any potentially stale data
+      setAnalysisId(null);
+      setAppState('home'); // Go back home on error
+    }
+  };
+
+  // Callback passed from AnalysisLoading when backend signals completion
+  const onAnalysisComplete = useCallback(async (resultId, metadata) => {
+    console.log('Analysis complete callback with result ID:', resultId);
+    if (!resultId) {
+      console.error('onAnalysisComplete called without resultId');
+      // Handle error state appropriately
+      setAnalysisData({
+        metadata: {
+          error: 'Analysis completed without ID.',
+          ...(metadata || {})
+        },
+        summary: { content_overview: 'Error: Analysis ID missing.' }
+      });
+      setAppState('dashboard');
+      return;
+    }
+
+    // Use the existing retry logic to fetch the final data
+    await fetchAndDisplayAnalysisWithRetry(resultId, metadata);
+  }, []); // Empty dependency array if it doesn't depend on App state directly
+
+  // Extracted fetch logic with retry (used by onAnalysisComplete)
+  const fetchAndDisplayAnalysisWithRetry = async (
+    resultId,
+    metadata,
+    retryCount = 0
+  ) => {
+    const maxRetries = 4;
+    const retryDelay = 1500 * Math.pow(1.5, retryCount);
+
+    try {
+      console.log(
+        `Attempt ${retryCount + 1}: Fetching analysis data for ID: ${resultId}`
+      );
+      const response = await axios.get(
+        `${API_BASE_URL}/api/analysis/${resultId}`,
+        { timeout: 10000 }
+      );
+      console.log('Full analysis response:', response);
+
+      if (response.data) {
+        const analysisResultData = response.data.analysis_data || response.data;
+        console.log('Parsed analysis data:', analysisResultData);
+        setAnalysisData(analysisResultData);
+        setAppState('dashboard');
+        return true;
+      } else {
+        console.warn('Received response but no analysis data');
+        throw new Error('Empty data received');
+      }
+    } catch (error) {
+      console.error(
+        `Error fetching completed analysis (Attempt ${retryCount + 1}):`,
+        error
+      );
+      if (
+        (error.response?.status === 404 ||
+          error.code === 'ECONNABORTED' ||
+          error.message === 'Empty data received') &&
+        retryCount < maxRetries
+      ) {
+        console.log(`Retrying fetch in ${retryDelay.toFixed(0)}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return fetchAndDisplayAnalysisWithRetry(
+          resultId,
+          metadata,
+          retryCount + 1
+        );
+      } else {
+        console.error('Max retries reached or non-retryable error.');
+        setAnalysisData({
+          metadata: {
+            id: resultId,
+            error: `Failed to fetch analysis after ${
+              maxRetries + 1
+            } attempts: ${error.message}`,
+            ...(metadata || {})
+          },
+          summary: {
+            content_overview: `Error loading analysis: ${error.message}`
+          }
+        });
+        setAppState('dashboard');
+        return false;
+      }
+    }
+  };
+
   const handleBackToHome = () => {
     setAppState('home');
     setAnalysisData(null);
-    setAnalysisContent(null);
     setAnalysisId(null);
+    setAnalysisContent(null);
   };
 
   return (
@@ -177,7 +294,10 @@ function App() {
 
       <main>
         {appState === 'home' && (
-          <HomePage onStartAnalysis={handleStartAnalysis} />
+          <HomePage
+            onStartAnalysis={handleStartAnalysis}
+            onAnalysisSelect={fetchAndDisplayAnalysis} // Pass fetcher for saved items
+          />
         )}
 
         {appState === 'loading' && (
@@ -187,142 +307,13 @@ function App() {
             status={loadingStatus}
             type={analysisContent?.type || 'file'}
             contentName={
-              analysisContent?.type === 'url'
-                ? analysisContent.content
-                : analysisContent?.content?.name
+              analysisContent?.name || // Use analysis name if provided
+              analysisContent?.content?.name || // Fallback to filename
+              'Video'
             }
             analysisId={analysisId}
-            onAnalysisComplete={async (resultId, metadata) => {
-              console.log(
-                'Analysis complete callback with result ID:',
-                resultId
-              );
-              if (!resultId) {
-                console.error('onAnalysisComplete called without resultId');
-                // Handle case where completion is called without an ID
-                setAnalysisData({
-                  metadata: {
-                    error: 'Analysis completed without ID.',
-                    ...(metadata || {})
-                  },
-                  summary: { content_overview: 'Error: Analysis ID missing.' }
-                });
-                setAppState('dashboard');
-                return;
-              }
-
-              // Function to fetch the final analysis data with retries
-              const fetchFinalAnalysis = async (retryCount = 0) => {
-                const maxRetries = 4; // Try up to 5 times (initial + 4 retries)
-                const retryDelay = 1500 * Math.pow(1.5, retryCount); // Exponential backoff
-
-                try {
-                  console.log(
-                    `Attempt ${
-                      retryCount + 1
-                    }: Fetching analysis data for ID: ${resultId}`
-                  );
-                  const response = await axios.get(
-                    `${API_BASE_URL}/api/analysis/${resultId}`,
-                    { timeout: 10000 } // 10-second timeout for this request
-                  );
-
-                  console.log('Full analysis response:', response);
-
-                  if (response.data) {
-                    const analysisResultData =
-                      response.data.analysis_data || response.data;
-                    console.log('Parsed analysis data:', analysisResultData);
-                    setAnalysisData(analysisResultData);
-                    setAppState('dashboard');
-                    return true; // Success
-                  } else {
-                    console.warn('Received response but no analysis data');
-                    // Treat as potentially retryable error if backend returns empty success
-                    throw new Error('Empty data received');
-                  }
-                } catch (error) {
-                  console.error(
-                    `Error fetching completed analysis (Attempt ${
-                      retryCount + 1
-                    }):`,
-                    error
-                  );
-                  // Only retry on 404 or specific network errors
-                  if (
-                    (error.response?.status === 404 ||
-                      error.code === 'ECONNABORTED' || // Timeout
-                      error.message === 'Empty data received') &&
-                    retryCount < maxRetries
-                  ) {
-                    console.log(
-                      `Retrying fetch in ${retryDelay.toFixed(0)}ms...`
-                    );
-                    await new Promise(resolve =>
-                      setTimeout(resolve, retryDelay)
-                    );
-                    return fetchFinalAnalysis(retryCount + 1); // Recursive call
-                  } else {
-                    // Non-retryable error or max retries reached
-                    console.error(
-                      'Max retries reached or non-retryable error.'
-                    );
-                    // Set error state for dashboard
-                    setAnalysisData({
-                      metadata: {
-                        id: resultId,
-                        error: `Failed to fetch analysis after ${
-                          maxRetries + 1
-                        } attempts: ${error.message}`,
-                        ...(metadata || {})
-                      },
-                      summary: {
-                        content_overview: `Error loading analysis: ${error.message}`
-                      }
-                    });
-                    setAppState('dashboard');
-                    return false; // Failure
-                  }
-                }
-              };
-
-              // Start the fetch process
-              await fetchFinalAnalysis();
-            }}
-            onCompleteClick={() => {
-              // Force transition to dashboard if button is clicked
-              if (analysisData) {
-                setAppState('dashboard');
-              } else {
-                // Try to get data from analyses list as fallback
-                (async () => {
-                  try {
-                    const response = await axios.get(
-                      `${API_BASE_URL}/api/analyses`
-                    );
-                    const completedAnalysis = response.data.analyses.find(
-                      analysis => analysis.metadata.id === analysisId
-                    );
-
-                    if (completedAnalysis && completedAnalysis.analysis_data) {
-                      setAnalysisData(completedAnalysis.analysis_data);
-                      setAppState('dashboard');
-                    } else {
-                      // If we still can't get the data, show an empty dashboard
-                      console.warn(
-                        'No analysis data found, showing empty dashboard'
-                      );
-                      setAnalysisData({});
-                      setAppState('dashboard');
-                    }
-                  } catch (error) {
-                    console.error('Error fetching analysis data:', error);
-                    setAnalysisData({});
-                    setAppState('dashboard');
-                  }
-                })();
-              }
-            }}
+            onAnalysisComplete={onAnalysisComplete}
+            // Removed onCompleteClick as direct fetch is preferred
           />
         )}
 

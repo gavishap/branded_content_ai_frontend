@@ -15,13 +15,11 @@ import {
   FiPlay,
   FiRefreshCw,
   FiAlertCircle,
-  FiVideo
+  FiVideo,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi';
-
-// API URL configuration (use environment variable in production)
-const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL ||
-  'https://branded-content-ai-a6ff96db0804.herokuapp.com';
+import { API_BASE_URL } from '../../config';
 
 const SavedAnalysesList = ({ onAnalysisSelect }) => {
   const [analyses, setAnalyses] = useState([]);
@@ -60,14 +58,14 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
 
   const fetchAnalyses = async () => {
     setLoading(true);
-    setError(null); // Clear any previous errors
+    setError(null);
 
     try {
-      console.log(`Fetching analyses from ${API_BASE_URL}/api/saved-analyses`);
-
-      // Add a timeout to the request to prevent endless loading
+      console.log(
+        `Fetching analyses from ${API_BASE_URL}/api/saved-analyses (Page: ${page})`
+      );
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       const response = await axios.get(
         `${API_BASE_URL}/api/saved-analyses?limit=${limit}&skip=${
@@ -75,43 +73,31 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
         }`,
         {
           signal: controller.signal,
-          // Don't send credentials
           withCredentials: false,
-          // Add explicit headers
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json'
           }
         }
       );
-
-      // Clear the timeout since we got a response
       clearTimeout(timeoutId);
-
       console.log('Response received:', response.data);
 
-      // Check if we have analyses array in the response (even if empty)
-      if (response.data && response.data.hasOwnProperty('analyses')) {
+      if (response.data && response.data.analyses) {
         setAnalyses(response.data.analyses || []);
-        setLoading(false);
-
-        // Log if we got an empty array but a success response
-        if (response.data.analyses && response.data.analyses.length === 0) {
-          console.log('Received successful response but empty analyses array');
-        }
       } else {
-        // Handle malformed response
-        console.error('Malformed API response:', response.data);
+        console.error(
+          'Malformed API response for saved analyses:',
+          response.data
+        );
         setError('Failed to load analyses. Unexpected API response format.');
-        setLoading(false);
+        setAnalyses([]);
       }
     } catch (err) {
       console.error('Error details:', err);
-
-      // Check if this was an abort error (timeout)
       if (err.name === 'CanceledError' || err.name === 'AbortError') {
         console.error('Request timed out or was canceled');
-        setError('Request timed out. The backend may be unreachable.');
+        setError('Request timed out. Could not load saved analyses.');
       } else if (err.code === 'ERR_NETWORK') {
         console.error('Network error:', err);
         setError('Network error. The backend server may be unreachable.');
@@ -121,91 +107,41 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
           'CORS error. The backend is not configured to accept requests from this domain.'
         );
       } else if (err.response) {
-        // We got a response with an error status
         console.error(
           `Server responded with ${err.response.status}:`,
           err.response.data
         );
-        setError(`Server error: ${err.response.data.error || 'Unknown error'}`);
+        setError(
+          `Server error (${err.response.status}): ${
+            err.response.data?.error || 'Failed to load'
+          }`
+        );
       } else {
         console.error('Error fetching saved analyses:', err);
         setError('Failed to load analyses. Please try again later.');
       }
-      setLoading(false);
-      // Set analyses to empty array to ensure UI shows "no analyses" state
       setAnalyses([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleAnalysisSelect = async analysis => {
+  const handleCardClick = analysisId => {
+    console.log(`Selected saved analysis ID: ${analysisId}`);
+    onAnalysisSelect(analysisId);
+  };
+
+  const formatDate = isoString => {
+    if (!isoString) return 'Unknown Date';
     try {
-      // Fetch the full analysis data
-      const response = await axios.get(
-        `${API_BASE_URL}/api/saved-analyses/${analysis.id}`
-      );
-
-      // Check if the response contains valid data
-      if (response.data && response.data.analysis) {
-        // Pass the analysis data to the parent component
-        onAnalysisSelect(response.data.analysis);
-      } else if (analysis.analysis_data) {
-        // If the analysis already has data, use that instead
-        onAnalysisSelect(analysis);
-      } else {
-        console.error('Failed to load analysis: Invalid response format');
-      }
-    } catch (err) {
-      console.error('Error loading analysis:', err);
-      // If we fail to get details but have the analysis, use what we have
-      if (analysis.analysis_data) {
-        onAnalysisSelect(analysis);
-      }
+      return new Date(isoString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return 'Invalid Date';
     }
-  };
-
-  const handleDelete = async (e, analysisId) => {
-    e.stopPropagation(); // Prevent triggering the card click
-
-    if (
-      window.confirm(
-        'Are you sure you want to delete this analysis? This action cannot be undone.'
-      )
-    ) {
-      try {
-        const response = await axios.delete(
-          `${API_BASE_URL}/api/saved-analyses/${analysisId}`
-        );
-
-        // Check if the request was successful (status code 200-299)
-        if (response.status >= 200 && response.status < 300) {
-          // Refresh the list
-          fetchAnalyses();
-        } else {
-          console.error(
-            'Failed to delete analysis:',
-            response.data.error || 'Unknown error'
-          );
-        }
-      } catch (err) {
-        console.error('Error deleting analysis:', err);
-      }
-    }
-  };
-
-  // Function to format content name for display
-  const formatContentName = name => {
-    if (!name) return 'Unknown Content';
-
-    // Remove timestamp portion if present
-    const nameParts = name.split('_');
-    if (
-      nameParts.length > 1 &&
-      /^\d{8}_\d{6}$/.test(nameParts[nameParts.length - 1])
-    ) {
-      return nameParts.slice(0, -1).join('_');
-    }
-
-    return name;
   };
 
   return (
@@ -412,7 +348,7 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
                   boxShadow: shadows.lg,
                   y: -5
                 }}
-                onClick={() => handleAnalysisSelect(analysis)}
+                onClick={() => handleCardClick(analysis.id)}
                 style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.8)',
                   borderRadius: borderRadius.xl,
@@ -427,111 +363,18 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
                 }}
                 className="glass"
               >
-                <motion.div
-                  whileHover={{ opacity: 1 }}
-                  style={{
-                    position: 'absolute',
-                    top: spacing.sm,
-                    right: spacing.sm,
-                    zIndex: 2
-                  }}
-                >
-                  <motion.button
-                    onClick={e => handleDelete(e, analysis.id)}
-                    whileHover={{
-                      scale: 1.1,
-                      backgroundColor: `${colors.status.error}30`
-                    }}
-                    whileTap={{ scale: 0.9 }}
-                    style={{
-                      background: `${colors.status.error}20`,
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: colors.status.error,
-                      padding: spacing.sm,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: shadows.sm
-                    }}
-                    aria-label="Delete analysis"
-                  >
-                    <FiTrash2 size={16} />
-                  </motion.button>
-                </motion.div>
-
                 <div
                   style={{
                     width: '100%',
                     height: '160px',
-                    backgroundColor: `${colors.neutral.darkGrey}20`,
-                    position: 'relative',
+                    backgroundColor: `${colors.neutral.lightGrey}40`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     overflow: 'hidden'
                   }}
                 >
-                  {analysis.thumbnail ? (
-                    <img
-                      src={analysis.thumbnail}
-                      alt={`Thumbnail for ${analysis.content_name}`}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover'
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        background: `linear-gradient(135deg, ${colors.primary.light}50, ${colors.accent.purple}50)`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <FiVideo size={48} color="white" />
-                    </div>
-                  )}
-
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    whileHover={{ opacity: 1 }}
-                    transition={{ duration: 0.2 }}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '100%',
-                      background: 'rgba(0,0,0,0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                  >
-                    <motion.div
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      style={{
-                        width: '50px',
-                        height: '50px',
-                        borderRadius: '50%',
-                        backgroundColor: 'rgba(255,255,255,0.9)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: shadows.lg
-                      }}
-                    >
-                      <FiPlay
-                        size={24}
-                        color={colors.primary.main}
-                        style={{ marginLeft: '2px' }}
-                      />
-                    </motion.div>
-                  </motion.div>
+                  <FiVideo size={48} color={colors.neutral.grey} />
                 </div>
 
                 <div style={{ padding: spacing.md }}>
@@ -546,8 +389,10 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
                     }}
+                    title={analysis.analysis_name}
                   >
-                    {formatContentName(analysis.content_name)}
+                    {analysis.analysis_name ||
+                      `Analysis ${analysis.id.substring(0, 8)}...`}
                   </h3>
 
                   <p
@@ -557,130 +402,104 @@ const SavedAnalysesList = ({ onAnalysisSelect }) => {
                       color: colors.neutral.darkGrey
                     }}
                   >
-                    {analysis.formatted_date}
+                    {formatDate(analysis.timestamp)}
                   </p>
                 </div>
               </motion.div>
             ))}
           </motion.div>
 
-          {analyses.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginTop: spacing.xl
+            }}
+          >
+            <motion.button
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0}
+              whileHover={
+                page === 0 ? {} : { scale: 1.05, boxShadow: shadows.md }
+              }
+              whileTap={page === 0 ? {} : { scale: 0.95 }}
               style={{
+                padding: `${spacing.sm} ${spacing.lg}`,
+                backgroundColor:
+                  page === 0
+                    ? colors.neutral.lightGrey
+                    : 'rgba(255, 255, 255, 0.8)',
+                color:
+                  page === 0 ? colors.neutral.darkGrey : colors.primary.dark,
+                border: `1px solid ${
+                  page === 0 ? 'transparent' : colors.primary.main
+                }`,
+                borderRadius: borderRadius.lg,
+                marginRight: spacing.md,
+                cursor: page === 0 ? 'default' : 'pointer',
+                opacity: page === 0 ? 0.5 : 1,
+                fontWeight: typography.fontWeights.medium,
+                fontSize: typography.fontSize.md,
                 display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                minWidth: '120px',
                 justifyContent: 'center',
-                marginTop: spacing.xl
+                boxShadow: page === 0 ? 'none' : shadows.sm,
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)'
               }}
+              className={page === 0 ? '' : 'glass'}
             >
-              <motion.button
-                onClick={() => setPage(Math.max(0, page - 1))}
-                disabled={page === 0}
-                whileHover={
-                  page === 0 ? {} : { scale: 1.05, boxShadow: shadows.md }
-                }
-                whileTap={page === 0 ? {} : { scale: 0.95 }}
-                style={{
-                  padding: `${spacing.sm} ${spacing.lg}`,
-                  backgroundColor:
-                    page === 0
-                      ? colors.neutral.lightGrey
-                      : 'rgba(255, 255, 255, 0.8)',
-                  color:
-                    page === 0 ? colors.neutral.darkGrey : colors.primary.dark,
-                  border: `1px solid ${
-                    page === 0 ? 'transparent' : colors.primary.main
-                  }`,
-                  borderRadius: borderRadius.lg,
-                  marginRight: spacing.md,
-                  cursor: page === 0 ? 'default' : 'pointer',
-                  opacity: page === 0 ? 0.5 : 1,
-                  fontWeight: typography.fontWeights.medium,
-                  fontSize: typography.fontSize.md,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  minWidth: '120px',
-                  justifyContent: 'center',
-                  boxShadow: page === 0 ? 'none' : shadows.sm,
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)'
-                }}
-                className={page === 0 ? '' : 'glass'}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M15 18l-6-6 6-6" />
-                </svg>
-                Previous
-              </motion.button>
+              <FiChevronLeft size={18} />
+              Previous
+            </motion.button>
 
-              <motion.button
-                onClick={() => setPage(page + 1)}
-                disabled={analyses.length < limit}
-                whileHover={
+            <motion.button
+              onClick={() => setPage(page + 1)}
+              disabled={analyses.length < limit}
+              whileHover={
+                analyses.length < limit
+                  ? {}
+                  : { scale: 1.05, boxShadow: shadows.md }
+              }
+              whileTap={analyses.length < limit ? {} : { scale: 0.95 }}
+              style={{
+                padding: `${spacing.sm} ${spacing.lg}`,
+                backgroundColor:
                   analyses.length < limit
-                    ? {}
-                    : { scale: 1.05, boxShadow: shadows.md }
-                }
-                whileTap={analyses.length < limit ? {} : { scale: 0.95 }}
-                style={{
-                  padding: `${spacing.sm} ${spacing.lg}`,
-                  backgroundColor:
-                    analyses.length < limit
-                      ? colors.neutral.lightGrey
-                      : 'rgba(255, 255, 255, 0.8)',
-                  color:
-                    analyses.length < limit
-                      ? colors.neutral.darkGrey
-                      : colors.primary.dark,
-                  border: `1px solid ${
-                    analyses.length < limit
-                      ? 'transparent'
-                      : colors.primary.main
-                  }`,
-                  borderRadius: borderRadius.lg,
-                  cursor: analyses.length < limit ? 'default' : 'pointer',
-                  opacity: analyses.length < limit ? 0.5 : 1,
-                  fontWeight: typography.fontWeights.medium,
-                  fontSize: typography.fontSize.md,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: spacing.xs,
-                  minWidth: '120px',
-                  justifyContent: 'center',
-                  boxShadow: analyses.length < limit ? 'none' : shadows.sm,
-                  backdropFilter: 'blur(10px)',
-                  WebkitBackdropFilter: 'blur(10px)'
-                }}
-                className={analyses.length < limit ? '' : 'glass'}
-              >
-                Next
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </motion.button>
-            </motion.div>
-          )}
+                    ? colors.neutral.lightGrey
+                    : 'rgba(255, 255, 255, 0.8)',
+                color:
+                  analyses.length < limit
+                    ? colors.neutral.darkGrey
+                    : colors.primary.dark,
+                border: `1px solid ${
+                  analyses.length < limit ? 'transparent' : colors.primary.main
+                }`,
+                borderRadius: borderRadius.lg,
+                cursor: analyses.length < limit ? 'default' : 'pointer',
+                opacity: analyses.length < limit ? 0.5 : 1,
+                fontWeight: typography.fontWeights.medium,
+                fontSize: typography.fontSize.md,
+                display: 'flex',
+                alignItems: 'center',
+                gap: spacing.xs,
+                minWidth: '120px',
+                justifyContent: 'center',
+                boxShadow: analyses.length < limit ? 'none' : shadows.sm,
+                backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)'
+              }}
+              className={analyses.length < limit ? '' : 'glass'}
+            >
+              Next
+              <FiChevronRight size={18} />
+            </motion.button>
+          </motion.div>
         </>
       )}
     </div>
