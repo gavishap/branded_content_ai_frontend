@@ -192,66 +192,102 @@ function App() {
                 : analysisContent?.content?.name
             }
             analysisId={analysisId}
-            onAnalysisComplete={(resultId, metadata) => {
-              console.log('Analysis complete with result ID:', resultId);
-              // Fetch the analysis data
-              (async () => {
+            onAnalysisComplete={async (resultId, metadata) => {
+              console.log(
+                'Analysis complete callback with result ID:',
+                resultId
+              );
+              if (!resultId) {
+                console.error('onAnalysisComplete called without resultId');
+                // Handle case where completion is called without an ID
+                setAnalysisData({
+                  metadata: {
+                    error: 'Analysis completed without ID.',
+                    ...(metadata || {})
+                  },
+                  summary: { content_overview: 'Error: Analysis ID missing.' }
+                });
+                setAppState('dashboard');
+                return;
+              }
+
+              // Function to fetch the final analysis data with retries
+              const fetchFinalAnalysis = async (retryCount = 0) => {
+                const maxRetries = 4; // Try up to 5 times (initial + 4 retries)
+                const retryDelay = 1500 * Math.pow(1.5, retryCount); // Exponential backoff
+
                 try {
-                  if (resultId) {
-                    console.log(`Fetching analysis data for ID: ${resultId}`);
-                    const response = await axios.get(
-                      `${API_BASE_URL}/api/analysis/${resultId}`
-                    );
+                  console.log(
+                    `Attempt ${
+                      retryCount + 1
+                    }: Fetching analysis data for ID: ${resultId}`
+                  );
+                  const response = await axios.get(
+                    `${API_BASE_URL}/api/analysis/${resultId}`,
+                    { timeout: 10000 } // 10-second timeout for this request
+                  );
 
-                    // Log the complete response for debugging
-                    console.log('Full analysis response:', response);
+                  console.log('Full analysis response:', response);
 
-                    if (response.data) {
-                      // API might return analysis data directly or nested in analysis_data
-                      const analysisData =
-                        response.data.analysis_data || response.data;
-
-                      console.log('Parsed analysis data:', analysisData);
-
-                      // The dashboard expects a complete data structure
-                      setAnalysisData(analysisData);
-                      setAppState('dashboard');
-                    } else {
-                      console.warn('Received response but no analysis data');
-                      // Create minimal data structure for dashboard
-                      const fallbackData = {
-                        metadata: {
-                          id: resultId,
-                          ...(metadata || {})
-                        },
-                        summary: {
-                          content_overview:
-                            'Analysis data incomplete or unavailable',
-                          overall_performance_score: 0
-                        }
-                      };
-                      setAnalysisData(fallbackData);
-                      setAppState('dashboard');
-                    }
+                  if (response.data) {
+                    const analysisResultData =
+                      response.data.analysis_data || response.data;
+                    console.log('Parsed analysis data:', analysisResultData);
+                    setAnalysisData(analysisResultData);
+                    setAppState('dashboard');
+                    return true; // Success
+                  } else {
+                    console.warn('Received response but no analysis data');
+                    // Treat as potentially retryable error if backend returns empty success
+                    throw new Error('Empty data received');
                   }
                 } catch (error) {
-                  console.error('Error fetching completed analysis:', error);
-                  // Create minimal data structure with error info
-                  const errorData = {
-                    metadata: {
-                      id: resultId,
-                      error: error.message,
-                      ...(metadata || {})
-                    },
-                    summary: {
-                      content_overview: `Error loading analysis: ${error.message}`,
-                      overall_performance_score: 0
-                    }
-                  };
-                  setAnalysisData(errorData);
-                  setAppState('dashboard');
+                  console.error(
+                    `Error fetching completed analysis (Attempt ${
+                      retryCount + 1
+                    }):`,
+                    error
+                  );
+                  // Only retry on 404 or specific network errors
+                  if (
+                    (error.response?.status === 404 ||
+                      error.code === 'ECONNABORTED' || // Timeout
+                      error.message === 'Empty data received') &&
+                    retryCount < maxRetries
+                  ) {
+                    console.log(
+                      `Retrying fetch in ${retryDelay.toFixed(0)}ms...`
+                    );
+                    await new Promise(resolve =>
+                      setTimeout(resolve, retryDelay)
+                    );
+                    return fetchFinalAnalysis(retryCount + 1); // Recursive call
+                  } else {
+                    // Non-retryable error or max retries reached
+                    console.error(
+                      'Max retries reached or non-retryable error.'
+                    );
+                    // Set error state for dashboard
+                    setAnalysisData({
+                      metadata: {
+                        id: resultId,
+                        error: `Failed to fetch analysis after ${
+                          maxRetries + 1
+                        } attempts: ${error.message}`,
+                        ...(metadata || {})
+                      },
+                      summary: {
+                        content_overview: `Error loading analysis: ${error.message}`
+                      }
+                    });
+                    setAppState('dashboard');
+                    return false; // Failure
+                  }
                 }
-              })();
+              };
+
+              // Start the fetch process
+              await fetchFinalAnalysis();
             }}
             onCompleteClick={() => {
               // Force transition to dashboard if button is clicked

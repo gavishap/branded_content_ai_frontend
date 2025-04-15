@@ -28,8 +28,24 @@ import {
 } from '../../utils/theme';
 
 const AnalysisDashboard = ({ data }) => {
-  if (!data) {
-    return <div>No analysis data available</div>;
+  // Check for null, undefined, or an object indicating a fetch error
+  if (!data || Object.keys(data).length === 0 || data.metadata?.error) {
+    const errorMessage = data?.metadata?.error || 'No analysis data available';
+    return (
+      <div
+        style={{
+          padding: spacing.xl,
+          textAlign: 'center',
+          color: colors.status.error,
+          backgroundColor: `${colors.status.error}10`,
+          borderRadius: borderRadius.lg,
+          margin: spacing.xl
+        }}
+      >
+        <h2>Error Loading Analysis</h2>
+        <p>{errorMessage}</p>
+      </div>
+    );
   }
 
   // Ensure all required data structures exist to prevent errors
