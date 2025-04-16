@@ -71,7 +71,10 @@ const PerformanceMetricsSection = ({ metrics }) => {
 
   // Function to render a single metric with its breakdown
   const renderMetricBreakdown = (title, data, icon) => {
-    const breakdown = Object.entries(data.breakdown).map(([key, value]) => ({
+    // Ensure breakdown exists, use empty object as fallback
+    const breakdownData = data.breakdown || {};
+
+    const breakdown = Object.entries(breakdownData).map(([key, value]) => ({
       label: key
         .split('_')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))

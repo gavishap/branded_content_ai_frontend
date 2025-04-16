@@ -14,6 +14,17 @@ import {
 } from '../../utils/theme';
 
 const AudienceAnalysisSection = ({ audienceData }) => {
+  // Return placeholder if no audienceData is provided
+  if (!audienceData || Object.keys(audienceData).length === 0) {
+    return (
+      <Section title="Audience Analysis">
+        <div style={{ textAlign: 'center', padding: spacing.md }}>
+          No audience analysis data available.
+        </div>
+      </Section>
+    );
+  }
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -155,7 +166,17 @@ const AudienceAnalysisSection = ({ audienceData }) => {
       youtube: { label: 'YouTube', color: '#FF0000' }
     };
 
-    const platforms = Object.keys(audienceData.primary_audience.platform_fit);
+    // Get platform_fit from primary_audience or audience_fit, or use default empty object
+    const platformFitData = audienceData?.primary_audience?.platform_fit ||
+      audienceData?.audience_fit?.platform_fit || {
+        // Default platform fit if neither exists
+        Instagram: 50,
+        TikTok: 50,
+        YouTube: 50,
+        Facebook: 50
+      };
+
+    const platforms = Object.keys(platformFitData);
     const formattedLabels = [];
     const formattedColors = [];
 
@@ -173,7 +194,7 @@ const AudienceAnalysisSection = ({ audienceData }) => {
     return {
       labels: formattedLabels,
       colors: formattedColors,
-      data: Object.values(audienceData.primary_audience.platform_fit)
+      data: Object.values(platformFitData)
     };
   };
 
@@ -295,7 +316,11 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                 }}
               >
                 <strong>Demographic:</strong>{' '}
-                {audienceData.primary_audience.demographic}
+                {audienceData?.primary_audience?.demographic ||
+                  (Array.isArray(audienceData?.audience_fit?.primary_audience)
+                    ? audienceData?.audience_fit?.primary_audience.join(', ')
+                    : audienceData?.audience_fit?.primary_audience) ||
+                  'General audience'}
               </p>
               <p
                 style={{
@@ -304,7 +329,7 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                 }}
               >
                 <strong>Confidence:</strong>{' '}
-                {audienceData.primary_audience.confidence}
+                {audienceData?.primary_audience?.confidence || 'Medium'}
               </p>
             </div>
 
@@ -344,10 +369,23 @@ const AudienceAnalysisSection = ({ audienceData }) => {
               gap: spacing.md
             }}
           >
-            {audienceData.secondary_audiences.map((audience, index) => (
+            {/* Get secondary audiences from either source, with fallback to empty array */}
+            {(
+              audienceData?.secondary_audiences ||
+              audienceData?.audience_fit?.secondary_audiences ||
+              []
+            ).map((audience, index) => (
               <SecondaryAudienceCard
                 key={index}
-                audience={audience}
+                audience={
+                  typeof audience === 'string'
+                    ? {
+                        demographic: audience,
+                        confidence: 'Medium',
+                        reasons: ['Content relevance']
+                      }
+                    : audience
+                }
                 index={index}
               />
             ))}
@@ -456,7 +494,9 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                     color: colors.primary.main
                   }}
                 >
-                  {audienceData.representation_metrics.diversity_score}
+                  {audienceData.representation_metrics?.diversity_score ||
+                    audienceData.representation_metrics?.overall_score ||
+                    0}
                 </div>
               </div>
 
@@ -479,7 +519,11 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                     color: colors.accent.green
                   }}
                 >
-                  {audienceData.representation_metrics.inclusion_rating}
+                  {audienceData.representation_metrics?.inclusion_rating ||
+                    Math.round(
+                      audienceData.representation_metrics?.overall_score * 0.9
+                    ) ||
+                    0}
                 </div>
               </div>
 
@@ -502,7 +546,11 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                     color: colors.accent.blue
                   }}
                 >
-                  {audienceData.representation_metrics.appeal_breadth}
+                  {audienceData.representation_metrics?.appeal_breadth ||
+                    Math.round(
+                      audienceData.representation_metrics?.overall_score * 1.1
+                    ) ||
+                    0}
                 </div>
               </div>
             </div>
@@ -522,7 +570,9 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                 margin: 0
               }}
             >
-              {audienceData.representation_metrics.insights}
+              {audienceData.representation_metrics?.insights ||
+                audienceData.representation_metrics?.comparative_analysis ||
+                'No detailed insights available for demographic representation.'}
             </p>
           </motion.div>
         </motion.div>
