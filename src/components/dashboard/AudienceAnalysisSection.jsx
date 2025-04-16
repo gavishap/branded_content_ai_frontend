@@ -52,7 +52,10 @@ const AudienceAnalysisSection = ({ audienceData }) => {
 
   // Safely check for demographics data
   const demographics =
-    audienceData?.representation_metrics?.demographics_breakdown || {};
+    audienceData?.representation_metrics?.demographics_breakdown ||
+    // Check for representation_metrics at the parent level (separate from audienceData)
+    audienceData.parentRepresentationMetrics?.demographics_breakdown ||
+    {};
   const ageDistribution = demographics.age_distribution || {};
   const genderDistribution = demographics.gender_distribution || {};
   const ethnicityDistribution = demographics.ethnicity_distribution || {};
@@ -495,7 +498,9 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                   }}
                 >
                   {audienceData.representation_metrics?.diversity_score ||
+                    audienceData.parentRepresentationMetrics?.diversity_score ||
                     audienceData.representation_metrics?.overall_score ||
+                    audienceData.parentRepresentationMetrics?.overall_score ||
                     0}
                 </div>
               </div>
@@ -520,10 +525,14 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                   }}
                 >
                   {audienceData.representation_metrics?.inclusion_rating ||
+                    audienceData.parentRepresentationMetrics
+                      ?.inclusion_rating ||
                     Math.round(
-                      audienceData.representation_metrics?.overall_score * 0.9
-                    ) ||
-                    0}
+                      (audienceData.representation_metrics?.overall_score ||
+                        audienceData.parentRepresentationMetrics
+                          ?.overall_score ||
+                        0) * 0.9
+                    )}
                 </div>
               </div>
 
@@ -547,10 +556,13 @@ const AudienceAnalysisSection = ({ audienceData }) => {
                   }}
                 >
                   {audienceData.representation_metrics?.appeal_breadth ||
+                    audienceData.parentRepresentationMetrics?.appeal_breadth ||
                     Math.round(
-                      audienceData.representation_metrics?.overall_score * 1.1
-                    ) ||
-                    0}
+                      (audienceData.representation_metrics?.overall_score ||
+                        audienceData.parentRepresentationMetrics
+                          ?.overall_score ||
+                        0) * 1.1
+                    )}
                 </div>
               </div>
             </div>
@@ -571,7 +583,10 @@ const AudienceAnalysisSection = ({ audienceData }) => {
               }}
             >
               {audienceData.representation_metrics?.insights ||
+                audienceData.parentRepresentationMetrics?.insights ||
                 audienceData.representation_metrics?.comparative_analysis ||
+                audienceData.parentRepresentationMetrics
+                  ?.comparative_analysis ||
                 'No detailed insights available for demographic representation.'}
             </p>
           </motion.div>

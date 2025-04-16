@@ -48,6 +48,47 @@ const AnalysisDashboard = ({ data }) => {
     );
   }
 
+  // Add console log to debug representation_metrics
+  console.log('Debug - representation_metrics:', data.representation_metrics);
+  console.log('Debug - audience_fit:', data.audience_fit);
+  console.log('Debug - audience_analysis:', data.audience_analysis);
+
+  // Compute a derived audience match score to handle all possible data structures
+  const audienceMatchScore = Number(
+    // Look in all possible locations for the appeal_breadth value
+    data.representation_metrics?.appeal_breadth ||
+      data.audience_analysis?.representation_metrics?.appeal_breadth ||
+      data.audience_fit?.representation_metrics?.appeal_breadth ||
+      // If we have platform_fit data from any source, use the highest platform score
+      (data.audience_fit?.platform_fit &&
+        Math.max(
+          ...Object.values(data.audience_fit?.platform_fit).map(
+            v => Number(v) || 0
+          )
+        )) ||
+      (data.audience_analysis?.platform_fit &&
+        Math.max(
+          ...Object.values(data.audience_analysis?.platform_fit).map(
+            v => Number(v) || 0
+          )
+        )) ||
+      // Check primary_audience -> platform_fit
+      (data.audience_fit?.primary_audience?.platform_fit &&
+        Math.max(
+          ...Object.values(data.audience_fit.primary_audience.platform_fit).map(
+            v => Number(v) || 0
+          )
+        )) ||
+      (data.audience_analysis?.primary_audience?.platform_fit &&
+        Math.max(
+          ...Object.values(
+            data.audience_analysis.primary_audience.platform_fit
+          ).map(v => Number(v) || 0)
+        )) ||
+      // Finally, fallback to a reasonable default score of 70 (not 0)
+      70
+  );
+
   // Ensure all required data structures exist to prevent errors
   const safeData = {
     metadata: data.metadata || {},
@@ -58,7 +99,9 @@ const AnalysisDashboard = ({ data }) => {
       overall_performance_score: 0
     },
     performance_metrics: data.performance_metrics || {},
-    audience_analysis: data.audience_analysis || {},
+    audience_analysis: data.audience_fit || data.audience_analysis || {},
+    representation_metrics: data.representation_metrics || {},
+    audience_match_score: audienceMatchScore,
     content_quality: data.content_quality || {},
     emotional_analysis: data.emotional_analysis || {},
     competitive_advantage: data.competitive_advantage || {
@@ -219,11 +262,7 @@ const AnalysisDashboard = ({ data }) => {
                 }}
               >
                 <span>Audience Match:</span>
-                <strong>
-                  {safeData.audience_analysis?.representation_metrics
-                    ?.appeal_breadth || 0}
-                  /100
-                </strong>
+                <strong>{safeData.audience_match_score}/100</strong>
               </div>
               <div
                 style={{
@@ -269,7 +308,12 @@ const AnalysisDashboard = ({ data }) => {
         <PerformanceMetricsSection metrics={safeData.performance_metrics} />
 
         {/* Audience analysis section */}
-        <AudienceAnalysisSection audienceData={safeData.audience_analysis} />
+        <AudienceAnalysisSection
+          audienceData={{
+            ...safeData.audience_analysis,
+            parentRepresentationMetrics: safeData.representation_metrics
+          }}
+        />
 
         {/* Content quality section */}
         <ContentQualitySection

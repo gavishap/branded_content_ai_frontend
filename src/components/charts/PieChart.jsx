@@ -59,6 +59,9 @@ const PieChart = ({
         padding: 10,
         cornerRadius: 4,
         callbacks: {
+          title: function (tooltipItems) {
+            return tooltipItems[0].label;
+          },
           label: function (context) {
             const value = context.raw;
             const total = context.chart.data.datasets[0].data.reduce(
@@ -66,7 +69,16 @@ const PieChart = ({
               0
             );
             const percentage = Math.round((value / total) * 100);
-            return `${context.label}: ${value} (${percentage}%)`;
+            // Get the color square for the label
+            const bgColor = context.dataset.backgroundColor[context.dataIndex];
+            return `  ${percentage}%`;
+          },
+          labelColor: function (context) {
+            return {
+              borderColor: 'transparent',
+              backgroundColor:
+                context.dataset.backgroundColor[context.dataIndex]
+            };
           }
         }
       }
